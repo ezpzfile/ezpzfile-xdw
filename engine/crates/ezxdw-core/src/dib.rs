@@ -92,7 +92,8 @@ pub fn decode(bmi: &[u8], bits: &[u8]) -> Option<Image> {
         out[p + 2] = c as u8;
         out[p + 3] = 255;
     };
-    let pal = |i: usize| inf.palette.get(i).copied().unwrap_or(if i == 0 { 0 } else { 0xffffff });
+    // colours missing from a short palette are black
+    let pal = |i: usize| inf.palette.get(i).copied().unwrap_or(0);
     if inf.compression == 1 || inf.compression == 2 {
         rle(&inf, bits, |x, row, i| {
             if x < w && row < h {

@@ -90,14 +90,17 @@ function fontFor(face, weight, italic, size) {
 }
 
 async function loadImages(i, d) {
+  // take every picture's bytes first: other renders of the same page may
+  // drop the engine's copy while we wait for the decoder
+  const raw = d.images.map((_, k) => S.ed.image(i, k));
   const out = [];
   for (let k = 0; k < d.images.length; k++) {
-    const im = d.images[k];
-    const bytes = S.ed.image(i, k);
+    const im = d.images[k], bytes = raw[k];
     try {
-      if (im.k === "jpeg") out.push(await createImageBitmap(new Blob([bytes], { type: "image/jpeg" })));
+      if (!bytes.length) out.push(null);
+      else if (im.k === "jpeg") out.push(await createImageBitmap(new Blob([bytes], { type: "image/jpeg" })));
       else out.push(await createImageBitmap(new ImageData(new Uint8ClampedArray(bytes.buffer, bytes.byteOffset, bytes.length), im.w, im.h)));
-    } catch { out.push(null); }
+    } catch (e) { out.push(null); console.warn("picture", i, k, e); }
   }
   return out;
 }
@@ -1035,4 +1038,5 @@ function bindChrome() {
   });
 }
 
+window.__ezxdw = S; // for automated tests
 boot();

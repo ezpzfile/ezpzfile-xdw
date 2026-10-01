@@ -142,19 +142,24 @@ impl Display {
     pub fn new(w: f32, h: f32) -> Display {
         Display { w, h, clips: vec![Clip::default()], ..Default::default() }
     }
-    /// All text of the page in drawing order.
+    /// All text of the page in drawing order: a new line when the baseline
+    /// moves, a space where runs on a line are apart.
     pub fn text(&self) -> String {
         let mut out = String::new();
-        let mut last_y: Option<f32> = None;
+        let mut last: Option<(f32, f32)> = None; // (baseline y, end x)
         for it in &self.items {
-            if let Item::Text { y, text, size, .. } = it {
-                if let Some(ly) = last_y {
-                    if (ly - y).abs() > size * 0.5 {
+            if let Item::Text { x, y, text, size, xs, angle, .. } = it {
+                if let Some((ly, lx)) = last {
+                    if (ly - y).abs() > size * 0.5 || angle.abs() > 1.0 {
                         out.push('\n');
+                    } else if x - lx > size * 0.6 {
+                        out.push(' ');
                     }
                 }
                 out.push_str(text);
-                last_y = Some(*y);
+                let n = text.chars().count();
+                let end = x + xs.last().copied().unwrap_or(0.0) + if n > 0 { size * if text.chars().last().map(|c| (c as u32) < 0x2000).unwrap_or(false) { 0.5 } else { 1.0 } } else { 0.0 };
+                last = Some((*y, end));
             }
         }
         out

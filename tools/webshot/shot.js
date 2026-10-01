@@ -4,7 +4,7 @@ const { chromium } = require(require('child_process').execSync('npm root -g').to
 (async () => {
   const [editor, file, out, page = '1'] = process.argv.slice(2);
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 1400, height: 1000 }, deviceScaleFactor: 1 });
+  const ctx = await browser.newContext({ viewport: { width: 1400, height: 1400 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errors = [];
   p.on('pageerror', (e) => errors.push(String(e)));

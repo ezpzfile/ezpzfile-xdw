@@ -206,6 +206,27 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                 writeln!(out, "page {}: {:?} clips {} images {} skipped {:?}", k + 1, counts, disp.clips.len(), disp.images.len(), sk)?;
             }
         }
+        "images" => {
+            let d = ezxdw_core::doc::Document::open(b.clone())?;
+            let n: usize = a.get(3).ok_or("page")?.parse::<usize>()?.saturating_sub(1);
+            let disp = d.render(n)?;
+            for (k, im) in disp.images.iter().enumerate() {
+                match &im.data {
+                    ezxdw_core::gfx::ImageData::Jpeg(j) => writeln!(out, "{k}: jpeg {}x{} {} bytes", im.w, im.h, j.len())?,
+                    ezxdw_core::gfx::ImageData::Rgba(px) => {
+                        let dark = px.chunks_exact(4).filter(|p| p[3] > 0 && (p[0] as u32 + p[1] as u32 + p[2] as u32) < 600).count();
+                        writeln!(out, "{k}: rgba {}x{} non-white {dark}", im.w, im.h)?;
+                        if let Some(dir) = a.get(4) {
+                            let mut ppm = format!("P6\n{} {}\n255\n", im.w, im.h).into_bytes();
+                            for p in px.chunks_exact(4) {
+                                ppm.extend_from_slice(&p[..3]);
+                            }
+                            std::fs::write(format!("{dir}/img{k}.ppm"), ppm)?;
+                        }
+                    }
+                }
+            }
+        }
         "json" => {
             let d = ezxdw_core::doc::Document::open(b.clone())?;
             let n: usize = a.get(3).ok_or("page")?.parse::<usize>()?.saturating_sub(1);

@@ -219,9 +219,14 @@ fn record(r: &mut R, f: u16, p: &[u8], slots: &mut Vec<bool>) {
                 }),
             );
         }
-        0x00F7 | 0x06FF => {
+        0x00F7 => {
             let h = new_slot(slots);
             r.objs.insert(h, Obj::Other);
+        }
+        0x06FF => {
+            // region: …, bounding rectangle (left, top, right, bottom) at 14
+            let h = new_slot(slots);
+            r.objs.insert(h, Obj::Region([s(7), s(8), s(9), s(10)]));
         }
         0x012D => r.select(u16le(p, 0) as u32),
         0x01F0 => {
@@ -276,9 +281,59 @@ fn record(r: &mut R, f: u16, p: &[u8], slots: &mut Vec<bool>) {
             r.pattern_rect(dst, rop);
         }
         0x0B41 | 0x0F43 | 0x0940 | 0x0D33 => blit(r, f, p),
-        0x0626 => {}
+        0x0626 => escape(r, p),
         0x0104 | 0x0107 | 0x0109 | 0x0231 | 0x0234 | 0x0035 | 0x0037 | 0x0139 | 0x0436 | 0x0220 | 0x0228 => {}
         _ => r.out.skipped.push(format!("WMF record {f:#06x}")),
+    }
+}
+
+/// MFCOMMENT escapes of the older DocuWorks driver: "DW" 02 nn, followed
+/// by data after the comment itself.
+///   02 00  a picture: 6-byte header, then a DIB (BITMAPINFOHEADER, colours, bits)
+///   02 02  draw it: x, y, w, h, src x, src y, src w, src h (i16), raster op (u32)
+///   02 03  bands filled with the brush: x, y, n, 1, 0, 1, n, width, then n × (dy, height)
+///   02 01  the next picture from the page's picture list (like DWb)
+fn escape(r: &mut R, p: &[u8]) {
+    if u16le(p, 0) != 15 {
+        return;
+    }
+    let n = u16le(p, 2) as usize;
+    let data = p.get(4..4 + n).unwrap_or(&[]);
+    if data.len() < 4 || &data[..2] != b"DW" || data[2] != 2 {
+        return;
+    }
+    let extra = p.get(4 + n..).unwrap_or(&[]);
+    let s = |k: usize| i16le(extra, 2 * k) as f64;
+    match data[3] {
+        0 => {
+            let dibd = extra.get(6..).unwrap_or(&[]);
+            let Some(inf) = dib::info(dibd) else { return };
+            let size = u32le(dibd, 0) as usize;
+            let pal = inf.palette.len() * 4 + if inf.masks.is_some() && size == 40 { 12 } else { 0 };
+            let bits = dibd.get(size + pal..).unwrap_or(&[]);
+            r.dw_image = dib::decode(dibd, bits).map(|i| (i, !inf.top_down));
+        }
+        2 => {
+            let Some((img, bu)) = r.dw_image.clone() else { return };
+            let dst = [s(0), s(1), s(2), s(3)];
+            let src = [s(4) as i64, s(5) as i64, s(6) as i64, s(7) as i64];
+            r.blit(img, dst, src, u32le(extra, 16), bu);
+        }
+        1 => {
+            let pic = r.pics.get(r.next_pic);
+            r.next_pic += 1;
+            r.dw_image = pic.and_then(|d| crate::emf::external_picture(d));
+        }
+        3 => {
+            let (x, y, count, w) = (s(0), s(1), s(2).max(0.0) as usize, s(7));
+            let mut segs = Vec::new();
+            for k in 0..count {
+                let (dy, h) = (s(8 + 2 * k), s(9 + 2 * k));
+                segs.extend(r.poly_path(&R::rect_points([x, y + dy, x + w, y + dy + h]), true).0);
+            }
+            r.fill(crate::gfx::Path(segs));
+        }
+        _ => {}
     }
 }
 

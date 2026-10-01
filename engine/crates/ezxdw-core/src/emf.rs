@@ -84,6 +84,9 @@ pub(crate) enum Obj {
     Pen(Pen),
     Brush(Brush),
     Font(Font),
+    /// A WMF region (bounding rectangle, logical units): selecting it sets
+    /// the clip.
+    Region([f64; 4]),
     Other,
 }
 
@@ -530,6 +533,10 @@ impl<'a> R<'a> {
             Obj::Pen(p) => self.dc.pen = p,
             Obj::Brush(b) => self.dc.brush = b,
             Obj::Font(f) => self.dc.font = f,
+            Obj::Region(r) => {
+                let path = self.poly_path(&Self::rect_points(r), true);
+                self.set_clip(vec![path]);
+            }
             Obj::Other => {}
         }
     }
