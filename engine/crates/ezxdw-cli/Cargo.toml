@@ -1,0 +1,13 @@
+[package]
+name = "ezxdw-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "ezxdw"
+path = "src/main.rs"
+
+[dependencies]
+ezxdw-core = { path = "../ezxdw-core" }
+serde_json = "1"

@@ -1,0 +1,9 @@
+/engine/target/
+/corpus/local/
+*.xdw
+*.XDW
+*.xbd
+.DS_Store
+/web/pkg/
+/web/dist/
+__pycache__/

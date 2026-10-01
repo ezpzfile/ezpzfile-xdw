@@ -1,0 +1,29 @@
+EZPZ File XDW
+Copyright 2026 EZPZ File contributors
+
+This project reads and writes documents produced by DocuWorks (FUJIFILM
+Business Innovation, formerly Fuji Xerox). It is not affiliated with or
+endorsed by FUJIFILM Business Innovation Corp. "DocuWorks" is a trademark of
+FUJIFILM Business Innovation Corp.
+
+The format was worked out from public sample files (corpus/manifest.tsv) and by
+writing test files and opening them in the free DocuWorks Viewer Light.
+No DocuWorks software or SDK is used or shipped.
+
+Reference only (no code copied):
+  - xdw-salvage (The Unlicense) — read for comparison while checking findings.
+  - xdwlib (Apache-2.0) — documents the DocuWorks API names.
+
+Libraries
+  - encoding_rs (MIT/Apache-2.0), serde / serde_json (MIT/Apache-2.0),
+    wasm-bindgen (MIT/Apache-2.0)
+
+User interface assets
+  - Icons: Lucide (https://lucide.dev), ISC License.
+      Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of
+      Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2022.
+      Permission to use, copy, modify, and/or distribute this software for any purpose
+      with or without fee is hereby granted, provided that the above copyright notice
+      and this permission notice appear in all copies.
+  - UI font: Pretendard (SIL Open Font License 1.1), loaded from jsDelivr when online.
+  - EZPZ File logo: (c) EZPZ File. Not covered by the MIT/Apache licences of the code.
