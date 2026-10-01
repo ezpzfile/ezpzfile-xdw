@@ -1,13 +1,13 @@
-//! Whole-corpus checks. Uses the local sample files when `EZXDW_CORPUS`
+//! Whole-corpus checks. Uses the local sample files when `EZPZXDW_CORPUS`
 //! points at a folder of .xdw / .xbd files (see corpus/manifest.tsv).
 
-use ezxdw_core::container::Container;
-use ezxdw_core::doc::Document;
-use ezxdw_core::edit::Shape;
-use ezxdw_core::{props, tlv};
+use ezpzxdw_core::container::Container;
+use ezpzxdw_core::doc::Document;
+use ezpzxdw_core::edit::Shape;
+use ezpzxdw_core::{props, tlv};
 
 fn corpus() -> Vec<(String, Vec<u8>)> {
-    let Ok(dir) = std::env::var("EZXDW_CORPUS") else {
+    let Ok(dir) = std::env::var("EZPZXDW_CORPUS") else {
         return Vec::new();
     };
     let mut v: Vec<_> = std::fs::read_dir(dir)
@@ -96,7 +96,7 @@ fn edits_save_and_read_back() {
 
 #[test]
 fn new_pages_stamps_and_binder_documents() {
-    use ezxdw_core::pages::{a4_for, jpeg_size, Jpeg, Thumb};
+    use ezpzxdw_core::pages::{a4_for, jpeg_size, Jpeg, Thumb};
     let all = corpus();
     let Some((_, small)) = all.iter().find(|(n, _)| n.contains("codelibs-test_test_xdw_ver10")) else { return };
     let other = Document::open(small.clone()).unwrap();

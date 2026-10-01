@@ -10,7 +10,7 @@ const { chromium } = require(require('child_process').execSync('npm root -g').to
   await p.waitForFunction(() => document.querySelectorAll('.page').length > 0);
   for (let t = 0; t < 20; t++) {
     await p.waitForTimeout(1000);
-    const st = await p.evaluate(() => window.__ezxdw.pages.map((x) => x.drawn));
+    const st = await p.evaluate(() => window.__ezpzxdw.pages.map((x) => x.drawn));
     if (st[0]) { console.log('drawn after', t + 1, 's'); break; }
   }
   const c = await p.$$('.page'); await c[0].screenshot({ path: out });

@@ -9,7 +9,7 @@ const { chromium } = require(require('child_process').execSync('npm root -g').to
   await p.waitForFunction(() => document.querySelectorAll('.page').length > 0);
   await p.waitForTimeout(3000);
   const r = await p.evaluate(async () => {
-    const S = window.__ezxdw;
+    const S = window.__ezpzxdw;
     const d = JSON.parse(S.ed.render(0));
     const res = [];
     for (const it of d.items) if (it[0] === 'i') {

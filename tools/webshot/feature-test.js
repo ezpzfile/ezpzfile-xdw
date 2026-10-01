@@ -24,7 +24,7 @@ const path = require('path');
     await p.click(`#menubar .menu > button:has-text("${name}")`);
     await p.click(`.menu.open .drop button:has-text("${item}")`);
   };
-  const count = () => p.evaluate(() => window.__ezxdw.info.length);
+  const count = () => p.evaluate(() => window.__ezpzxdw.info.length);
   const log = (...a) => console.log(...a);
 
   if (!binder) {
@@ -51,7 +51,7 @@ const path = require('path');
     await p.waitForTimeout(1000);
     await p.keyboard.press('Escape');
     await p.screenshot({ path: path.join(out, 'f-1.png') });
-    log('annotations', await p.evaluate(() => window.__ezxdw.info[0].objects.map((o) => o.kind + (o.shape ? ':' + o.shape.type : '')).join(', ')));
+    log('annotations', await p.evaluate(() => window.__ezpzxdw.info[0].objects.map((o) => o.kind + (o.shape ? ':' + o.shape.type : '')).join(', ')));
 
     // blank page after page 1
     const n0 = await count();
@@ -61,7 +61,7 @@ const path = require('path');
     // picture as a page, after the current page
     let [fc] = await Promise.all([p.waitForEvent('filechooser'), menu('ページ', 'ファイルからページを挿入')]);
     await fc.setFiles(picture);
-    await p.waitForFunction((n) => window.__ezxdw.info.length > n, n0 + 1, { timeout: 30000 });
+    await p.waitForFunction((n) => window.__ezpzxdw.info.length > n, n0 + 1, { timeout: 30000 });
     log('picture page →', await count());
     // pages of another .xdw (all)
     const n1 = await count();
@@ -69,7 +69,7 @@ const path = require('path');
     await fc.setFiles(other);
     await p.waitForTimeout(800);
     if (await p.$('#dlg-range[open]')) await p.click('#dlg-range button[value=ok]');
-    await p.waitForFunction((n) => window.__ezxdw.info.length > n, n1, { timeout: 30000 });
+    await p.waitForFunction((n) => window.__ezpzxdw.info.length > n, n1, { timeout: 30000 });
     log('other .xdw →', await count());
     // a PDF (needs pdf.js from the network)
     if (pdf) {
@@ -83,7 +83,7 @@ const path = require('path');
         await p.click('#dlg-range button[value=ok]');
       } catch (e) { log('no range dialog', String(e).slice(0, 80)); }
       try {
-        await p.waitForFunction((n) => window.__ezxdw.info.length > n, n2, { timeout: 90000 });
+        await p.waitForFunction((n) => window.__ezpzxdw.info.length > n, n2, { timeout: 90000 });
       } catch (e) { log('PDF not inserted'); }
       log('pdf →', await count());
     }
@@ -95,7 +95,7 @@ const path = require('path');
       await p.screenshot({ path: path.join(out, `f-p${k + 1}.png`) });
     }
   } else {
-    log('binder', await p.evaluate(() => JSON.stringify(window.__ezxdw.binder)));
+    log('binder', await p.evaluate(() => JSON.stringify(window.__ezpzxdw.binder)));
     // add a document
     let [fc] = await Promise.all([p.waitForEvent('filechooser'), p.click('#binder-add')]);
     await fc.setFiles(other);
@@ -107,11 +107,11 @@ const path = require('path');
     await p.click('#dlg-prompt button[value=ok]');
     await p.waitForTimeout(800);
     // move the last document up
-    const n = await p.evaluate(() => window.__ezxdw.binder.docs.length);
+    const n = await p.evaluate(() => window.__ezpzxdw.binder.docs.length);
     await p.hover(`#pagelist li.doc >> nth=${n - 1}`);
     await p.click(`#pagelist li.doc >> nth=${n - 1} >> button[title="文書を上へ"]`);
     await p.waitForTimeout(1200);
-    log('binder after', await p.evaluate(() => JSON.stringify(window.__ezxdw.binder.docs.map((d) => [d.name, d.first_page, d.pages]))));
+    log('binder after', await p.evaluate(() => JSON.stringify(window.__ezpzxdw.binder.docs.map((d) => [d.name, d.first_page, d.pages]))));
     await p.screenshot({ path: path.join(out, 'b-1.png') });
   }
 

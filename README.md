@@ -41,7 +41,7 @@ to test with). See the [plan](docs/PLAN.ko.md).
 
 ## Editor
 
-`web/dist/ezxdw-editor.html` is the whole editor in one file: double-click it,
+`web/dist/ezpzxdw-editor.html` is the whole editor in one file: double-click it,
 drop a `.xdw` on the window, annotate, and save (Ctrl+S → `.xdw`). The screen
 follows DocuWorks Viewer (page list on the left, annotation tools on top,
 properties on the right) in the EZPZ File design. Keys: T text, S sticky note,
@@ -61,10 +61,10 @@ been tested yet.
 ## Layout
 
 ```
-engine/crates/ezxdw-core   reader, renderer (EMF/WMF/DW → display list), editor, writer, PDF
-engine/crates/ezxdw-cli    `ezxdw` command: info, tree, pages, render, text, edit, check …
-engine/crates/ezxdw-wasm   browser bindings
-web/                       the editor (build: web/build.sh → web/dist/ezxdw-editor.html)
+engine/crates/ezpzxdw-core   reader, renderer (EMF/WMF/DW → display list), editor, writer, PDF
+engine/crates/ezpzxdw-cli    `ezpzxdw` command: info, tree, pages, render, text, edit, check …
+engine/crates/ezpzxdw-wasm   browser bindings
+web/                       the editor (build: web/build.sh → web/dist/ezpzxdw-editor.html)
 docs/spec/XDW-FORMAT.md    the format
 tools/dwview               DocuWorks Viewer Light as a referee (Wine)
 tools/webshot              the editor driven headless (Playwright)
@@ -74,8 +74,8 @@ corpus/manifest.tsv        where the public sample files come from (files not in
 ## Build
 
 ```
-cd engine && cargo test                       # + EZXDW_CORPUS=/path/to/samples for the corpus tests
-cargo run -p ezxdw-cli -- pages file.xdw
+cd engine && cargo test                       # + EZPZXDW_CORPUS=/path/to/samples for the corpus tests
+cargo run -p ezpzxdw-cli -- pages file.xdw
 web/build.sh                                  # needs wasm32 target and wasm-bindgen-cli 0.2.129
 ```
 

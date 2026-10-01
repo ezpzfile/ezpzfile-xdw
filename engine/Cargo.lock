@@ -35,16 +35,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "ezxdw-cli"
-version = "0.1.0"
+name = "ezpzxdw-cli"
+version = "0.2.0"
 dependencies = [
- "ezxdw-core",
+ "ezpzxdw-core",
  "serde_json",
 ]
 
 [[package]]
-name = "ezxdw-core"
-version = "0.1.0"
+name = "ezpzxdw-core"
+version = "0.2.0"
 dependencies = [
  "encoding_rs",
  "serde",
@@ -52,10 +52,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "ezxdw-wasm"
-version = "0.1.0"
+name = "ezpzxdw-wasm"
+version = "0.2.0"
 dependencies = [
- "ezxdw-core",
+ "ezpzxdw-core",
  "serde",
  "serde_json",
  "wasm-bindgen",

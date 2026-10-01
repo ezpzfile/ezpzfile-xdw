@@ -1,5 +1,5 @@
 [package]
-name = "ezxdw-core"
+name = "ezpzxdw-core"
 description = "Reader and writer for DocuWorks (.xdw) documents"
 version.workspace = true
 edition.workspace = true

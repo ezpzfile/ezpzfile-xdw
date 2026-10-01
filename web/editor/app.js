@@ -30,8 +30,8 @@ const el = (tag, attrs = {}, ...kids) => {
   return e;
 };
 const store = {
-  get(k, d) { try { const v = localStorage.getItem("ezxdw." + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
-  set(k, v) { try { localStorage.setItem("ezxdw." + k, JSON.stringify(v)); } catch {} },
+  get(k, d) { try { const v = localStorage.getItem("ezpzxdw." + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("ezpzxdw." + k, JSON.stringify(v)); } catch {} },
 };
 const hex = (n) => "#" + (n >>> 0 & 0xffffff).toString(16).padStart(6, "0");
 const num = (h) => parseInt(h.slice(1), 16);
@@ -1411,5 +1411,5 @@ function bindChrome() {
   });
 }
 
-window.__ezxdw = S; // for automated tests
+window.__ezpzxdw = S; // for automated tests
 boot();

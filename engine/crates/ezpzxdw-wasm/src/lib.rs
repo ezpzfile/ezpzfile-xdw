@@ -1,10 +1,10 @@
 //! Browser bindings: open a `.xdw`, draw its pages, edit annotations and
 //! pages, save as `.xdw` or PDF.
 
-use ezxdw_core::doc::Document;
-use ezxdw_core::edit::Shape;
-use ezxdw_core::gfx::{Display, ImageData, Item, Path, Seg};
-use ezxdw_core::props::Record;
+use ezpzxdw_core::doc::Document;
+use ezpzxdw_core::edit::Shape;
+use ezpzxdw_core::gfx::{Display, ImageData, Item, Path, Seg};
+use ezpzxdw_core::props::Record;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 use wasm_bindgen::prelude::*;
@@ -229,7 +229,7 @@ impl XdwDoc {
         err(e)
     }
 
-    /// Add an annotation; `shape` is JSON (see ezxdw_core::edit::Shape).
+    /// Add an annotation; `shape` is JSON (see ezpzxdw_core::edit::Shape).
     /// Returns its object number on the page.
     #[wasm_bindgen(js_name = addAnnotation)]
     pub fn add_annotation(&mut self, page: usize, x: f64, y: f64, w: f64, h: f64, shape: &str) -> Result<usize, JsError> {
@@ -313,8 +313,8 @@ impl XdwDoc {
     #[wasm_bindgen(js_name = insertImagePage)]
     pub fn insert_image_page(&mut self, at: usize, w: f64, h: f64, jpeg: &[u8], pxw: u32, pxh: u32, thumb: &[u8], tw: u32, th: u32) -> Result<usize, JsError> {
         self.before();
-        let j = ezxdw_core::pages::Jpeg { data: jpeg, w: pxw, h: pxh };
-        let t = ezxdw_core::pages::Thumb { rgba: thumb, w: tw, h: th };
+        let j = ezpzxdw_core::pages::Jpeg { data: jpeg, w: pxw, h: pxh };
+        let t = ezpzxdw_core::pages::Thumb { rgba: thumb, w: tw, h: th };
         let r = self.doc.insert_image_page(at, w, h, &j, None, (!thumb.is_empty()).then_some(&t)).map_err(|e| self.fail(e))?;
         self.after();
         Ok(r)
@@ -378,7 +378,7 @@ impl XdwDoc {
     /// Today's date as a date stamp shows it ('26.10.01).
     #[wasm_bindgen(js_name = stampDate)]
     pub fn stamp_date(year: i32, month: u32, day: u32) -> String {
-        ezxdw_core::edit::stamp_date(year, month, day)
+        ezpzxdw_core::edit::stamp_date(year, month, day)
     }
 
     pub fn undo(&mut self) -> bool {
@@ -439,20 +439,20 @@ impl XdwDoc {
         let mut at = 0usize;
         for (k, &l) in lens.iter().enumerate() {
             let l = l as usize;
-            imgs.push(ezxdw_core::pdf::PageImage {
+            imgs.push(ezpzxdw_core::pdf::PageImage {
                 jpeg: jpegs.get(at..at + l).unwrap_or(&[]).to_vec(),
                 px_w: dims.get(2 * k).copied().unwrap_or(1),
                 px_h: dims.get(2 * k + 1).copied().unwrap_or(1),
             });
             at += l;
         }
-        Ok(ezxdw_core::pdf::to_pdf(&pages, &imgs, title))
+        Ok(ezpzxdw_core::pdf::to_pdf(&pages, &imgs, title))
     }
 
     /// Box size a text annotation needs (JSON [w, h], 1/100 mm).
     #[wasm_bindgen(js_name = textBox)]
     pub fn text_box(text: &str, size: f64) -> String {
-        let (w, h) = ezxdw_core::edit::text_box(text, size);
+        let (w, h) = ezpzxdw_core::edit::text_box(text, size);
         format!("[{w},{h}]")
     }
 }

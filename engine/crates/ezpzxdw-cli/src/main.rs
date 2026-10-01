@@ -1,33 +1,33 @@
-//! `ezxdw` — inspect DocuWorks files.
+//! `ezpzxdw` — inspect DocuWorks files.
 
-use ezxdw_core::container::{Body, Container};
-use ezxdw_core::{props, tlv};
+use ezpzxdw_core::container::{Body, Container};
+use ezpzxdw_core::{props, tlv};
 use std::io::Write;
 use std::process::ExitCode;
 
-const HELP: &str = r#"ezxdw — DocuWorks (.xdw) reader
+const HELP: &str = r#"ezpzxdw — DocuWorks (.xdw) reader
 
 USAGE:
-  ezxdw info   <file>            segments, trailer, entries
-  ezxdw tree   <file>            the object tree in the properties block
-  ezxdw props  <file> [out]      expanded properties block (raw bytes)
-  ezxdw entry  <file> <n> [out]  data of entry n (expanded when compressed)
-  ezxdw check  <file>            check values and properties round trip
-  ezxdw pages  <file>            pages and the objects on them
-  ezxdw render <file> [page]     what drawing a page produces (summary)
-  ezxdw text   <file>            text of every page
-  ezxdw set-attr <in> <record> <tag> <value> <out>
+  ezpzxdw info   <file>            segments, trailer, entries
+  ezpzxdw tree   <file>            the object tree in the properties block
+  ezpzxdw props  <file> [out]      expanded properties block (raw bytes)
+  ezpzxdw entry  <file> <n> [out]  data of entry n (expanded when compressed)
+  ezpzxdw check  <file>            check values and properties round trip
+  ezpzxdw pages  <file>            pages and the objects on them
+  ezpzxdw render <file> [page]     what drawing a page produces (summary)
+  ezpzxdw text   <file>            text of every page
+  ezpzxdw set-attr <in> <record> <tag> <value> <out>
                                  change one attribute (value: hex:…, u16:text, int:a,b, del)
-  ezxdw edit   <in> <ops.json> <out>
+  ezpzxdw edit   <in> <ops.json> <out>
                                  apply edits: [{"op":"add","page":0,"x":…,"y":…,"w":…,"h":…,"shape":{…}},
                                  {"op":"rotate","page":0,"q":1}, {"op":"delete_page","page":0},
                                  {"op":"move_page","from":0,"to":2}, {"op":"delete","page":0,"obj":1},
                                  {"op":"move","page":0,"obj":1,"x":…,"y":…}]
-  ezxdw resave <in> <out>        save again without changes (appends a segment)
-  ezxdw set-content <in> <entry> <data> <out>
+  ezpzxdw resave <in> <out>        save again without changes (appends a segment)
+  ezpzxdw set-content <in> <entry> <data> <out>
                                  replace what entry <entry> holds (expanded data)
-  ezxdw lzh-c  <in> <out>        compress (LHA -lh5-)
-  ezxdw lzh-d  <in> <size> <out> expand (LHA -lh5-)
+  ezpzxdw lzh-c  <in> <out>        compress (LHA -lh5-)
+  ezpzxdw lzh-d  <in> <size> <out> expand (LHA -lh5-)
 "#;
 
 fn main() -> ExitCode {
@@ -71,12 +71,12 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let b = std::fs::read(&a[2])?;
     match a[1].as_str() {
         "lzh-c" => {
-            std::fs::write(a.get(3).ok_or("missing out")?, ezxdw_core::lzh::compress(&b))?;
+            std::fs::write(a.get(3).ok_or("missing out")?, ezpzxdw_core::lzh::compress(&b))?;
             return Ok(());
         }
         "lzh-d" => {
             let n: usize = a.get(3).ok_or("missing size")?.parse()?;
-            std::fs::write(a.get(4).ok_or("missing out")?, ezxdw_core::lzh::decompress(&b, n)?)?;
+            std::fs::write(a.get(4).ok_or("missing out")?, ezpzxdw_core::lzh::decompress(&b, n)?)?;
             return Ok(());
         }
         _ => {}
@@ -129,7 +129,7 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                         None => format!("{}", at.tag),
                     };
                     let mark = if at.class & 0x40 != 0 { "ᵖ" } else { "" };
-                    if std::env::var_os("EZXDW_RAW").is_some() {
+                    if std::env::var_os("EZPZXDW_RAW").is_some() {
                         let h: String = at.value.iter().map(|x| format!("{x:02x}")).collect();
                         writeln!(out, "{pad}    {label}{mark} = {} <{h}>", show_value(&at.value))?;
                     } else {
@@ -178,7 +178,7 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             )?;
         }
         "pages" => {
-            let d = ezxdw_core::doc::Document::open(b.clone())?;
+            let d = ezpzxdw_core::doc::Document::open(b.clone())?;
             if let Some(n) = d.binder_name() {
                 writeln!(out, "binder {n:?}")?;
                 for (k, bd) in d.binder_docs().iter().enumerate() {
@@ -193,7 +193,7 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         "render" => {
-            let d = ezxdw_core::doc::Document::open(b.clone())?;
+            let d = ezpzxdw_core::doc::Document::open(b.clone())?;
             let pages: Vec<usize> = match a.get(3) {
                 Some(n) => vec![n.parse::<usize>()?.saturating_sub(1)],
                 None => (0..d.pages.len()).collect(),
@@ -203,10 +203,10 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                 let mut counts = std::collections::BTreeMap::new();
                 for it in &disp.items {
                     let n = match it {
-                        ezxdw_core::gfx::Item::Fill { .. } => "fill",
-                        ezxdw_core::gfx::Item::Stroke { .. } => "stroke",
-                        ezxdw_core::gfx::Item::Text { .. } => "text",
-                        ezxdw_core::gfx::Item::Image { .. } => "image",
+                        ezpzxdw_core::gfx::Item::Fill { .. } => "fill",
+                        ezpzxdw_core::gfx::Item::Stroke { .. } => "stroke",
+                        ezpzxdw_core::gfx::Item::Text { .. } => "text",
+                        ezpzxdw_core::gfx::Item::Image { .. } => "image",
                     };
                     *counts.entry(n).or_insert(0) += 1;
                 }
@@ -218,13 +218,13 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         "images" => {
-            let d = ezxdw_core::doc::Document::open(b.clone())?;
+            let d = ezpzxdw_core::doc::Document::open(b.clone())?;
             let n: usize = a.get(3).ok_or("page")?.parse::<usize>()?.saturating_sub(1);
             let disp = d.render(n)?;
             for (k, im) in disp.images.iter().enumerate() {
                 match &im.data {
-                    ezxdw_core::gfx::ImageData::Jpeg(j) => writeln!(out, "{k}: jpeg {}x{} {} bytes", im.w, im.h, j.len())?,
-                    ezxdw_core::gfx::ImageData::Rgba(px) => {
+                    ezpzxdw_core::gfx::ImageData::Jpeg(j) => writeln!(out, "{k}: jpeg {}x{} {} bytes", im.w, im.h, j.len())?,
+                    ezpzxdw_core::gfx::ImageData::Rgba(px) => {
                         let dark = px.chunks_exact(4).filter(|p| p[3] > 0 && (p[0] as u32 + p[1] as u32 + p[2] as u32) < 600).count();
                         writeln!(out, "{k}: rgba {}x{} non-white {dark}", im.w, im.h)?;
                         if let Some(dir) = a.get(4) {
@@ -239,12 +239,12 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         "json" => {
-            let d = ezxdw_core::doc::Document::open(b.clone())?;
+            let d = ezpzxdw_core::doc::Document::open(b.clone())?;
             let n: usize = a.get(3).ok_or("page")?.parse::<usize>()?.saturating_sub(1);
             writeln!(out, "{}", serde_json::to_string(&d.render(n)?)?)?;
         }
         "text" => {
-            let d = ezxdw_core::doc::Document::open(b.clone())?;
+            let d = ezpzxdw_core::doc::Document::open(b.clone())?;
             for (k, t) in d.text().iter().enumerate() {
                 writeln!(out, "--- page {}\n{t}", k + 1)?;
             }
@@ -269,7 +269,7 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             }
             r.set(0x80, props::A_DEFS, dv);
             r.set(0x80, tag, props::ints_value(&[v]));
-            let (o, _) = ezxdw_core::write::append(&b, &c, &[], &recs)?;
+            let (o, _) = ezpzxdw_core::write::append(&b, &c, &[], &recs)?;
             std::fs::write(a.get(6).ok_or("missing out")?, o)?;
         }
         "set-kind" => {
@@ -277,7 +277,7 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             let ri: usize = a.get(3).ok_or("record")?.parse()?;
             let k = i64::from_str_radix(a.get(4).ok_or("kind (hex)")?.trim_start_matches("0x"), 16)?;
             recs.get_mut(ri).ok_or("no such record")?.kind = props::num_bytes(k);
-            let (o, _) = ezxdw_core::write::append(&b, &c, &[], &recs)?;
+            let (o, _) = ezpzxdw_core::write::append(&b, &c, &[], &recs)?;
             std::fs::write(a.get(5).ok_or("missing out")?, o)?;
         }
         "set-attr" => {
@@ -301,22 +301,22 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                 let class = r.get(tag).map(|x| x.class).unwrap_or(0x80);
                 r.set(class, tag, value);
             }
-            let (o, _) = ezxdw_core::write::append(&b, &c, &[], &recs)?;
+            let (o, _) = ezpzxdw_core::write::append(&b, &c, &[], &recs)?;
             std::fs::write(a.get(6).ok_or("missing out")?, o)?;
         }
         "edit" => {
-            let mut d = ezxdw_core::doc::Document::open(b.clone())?;
+            let mut d = ezpzxdw_core::doc::Document::open(b.clone())?;
             let ops: Vec<serde_json::Value> = serde_json::from_str(&std::fs::read_to_string(a.get(3).ok_or("ops")?)?)?;
             for op in ops {
                 let g = |k: &str| op.get(k).and_then(|v| v.as_f64()).unwrap_or(0.0);
                 let page = g("page") as usize;
                 match op["op"].as_str().unwrap_or("") {
                     "add" => {
-                        let shape: ezxdw_core::edit::Shape = serde_json::from_value(op["shape"].clone())?;
+                        let shape: ezpzxdw_core::edit::Shape = serde_json::from_value(op["shape"].clone())?;
                         d.add_annotation(page, g("x"), g("y"), g("w"), g("h"), &shape)?;
                     }
                     "change" => {
-                        let shape: ezxdw_core::edit::Shape = serde_json::from_value(op["shape"].clone())?;
+                        let shape: ezpzxdw_core::edit::Shape = serde_json::from_value(op["shape"].clone())?;
                         d.change_annotation(page, g("obj") as usize, g("x"), g("y"), g("w"), g("h"), &shape)?;
                     }
                     "rotate" => d.rotate_page(page, g("q") as i32)?,
@@ -343,13 +343,13 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                     }
                     "image_page" => {
                         let jpeg = std::fs::read(op["file"].as_str().ok_or("file")?)?;
-                        let (iw, ih) = ezxdw_core::pages::jpeg_size(&jpeg).ok_or("not a JPEG")?;
-                        let (pw, ph) = ezxdw_core::pages::a4_for(iw, ih);
-                        let j = ezxdw_core::pages::Jpeg { data: &jpeg, w: iw, h: ih };
+                        let (iw, ih) = ezpzxdw_core::pages::jpeg_size(&jpeg).ok_or("not a JPEG")?;
+                        let (pw, ph) = ezpzxdw_core::pages::a4_for(iw, ih);
+                        let j = ezpzxdw_core::pages::Jpeg { data: &jpeg, w: iw, h: ih };
                         d.insert_image_page(g("at") as usize, pw, ph, &j, None, None)?;
                     }
                     "copy_pages" => {
-                        let other = ezxdw_core::doc::Document::open(std::fs::read(op["file"].as_str().ok_or("file")?)?)?;
+                        let other = ezpzxdw_core::doc::Document::open(std::fs::read(op["file"].as_str().ok_or("file")?)?)?;
                         let which: Vec<usize> = match op.get("pages").and_then(|v| v.as_array()) {
                             Some(v) => v.iter().filter_map(|x| x.as_u64()).map(|x| x as usize).collect(),
                             None => (0..other.pages.len()).collect(),
@@ -357,7 +357,7 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                         d.insert_pages_from(g("at") as usize, &other, &which)?;
                     }
                     "binder_add" => {
-                        let other = ezxdw_core::doc::Document::open(std::fs::read(op["file"].as_str().ok_or("file")?)?)?;
+                        let other = ezpzxdw_core::doc::Document::open(std::fs::read(op["file"].as_str().ok_or("file")?)?)?;
                         d.add_binder_docs(g("at") as usize, &other, op["name"].as_str().unwrap_or(""))?;
                     }
                     "binder_rename" => d.rename_binder_doc(g("doc") as usize, op["name"].as_str().unwrap_or(""))?,
@@ -374,11 +374,11 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         }
         "resave" => {
             let recs = props::parse(&c.properties(&b)?)?;
-            let (o, _) = ezxdw_core::write::append(&b, &c, &[], &recs)?;
+            let (o, _) = ezpzxdw_core::write::append(&b, &c, &[], &recs)?;
             std::fs::write(a.get(3).ok_or("missing out")?, o)?;
         }
         "set-content" => {
-            use ezxdw_core::write::{self, NewEntry};
+            use ezpzxdw_core::write::{self, NewEntry};
             let idx: u32 = a.get(3).ok_or("missing entry")?.parse()?;
             let data = std::fs::read(a.get(4).ok_or("missing data")?)?;
             let es = c.entries(&b)?;
