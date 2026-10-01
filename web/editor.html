@@ -228,6 +228,16 @@ dialog td:first-child { color: var(--ink-500); white-space: nowrap; }
 #welcome .card { background: var(--card); border-radius: var(--r-card); padding: 32px 36px; box-shadow: 0 1px 3px rgba(11, 16, 32, .08); text-align: center; display: grid; gap: 14px; max-width: 420px; }
 #welcome h2 { margin: 0; font-size: 18px; }
 #welcome p { margin: 0; color: var(--ink-500); }
+#pagelist li.doc { display: flex; align-items: center; justify-items: start; gap: 6px; min-height: 30px; padding: 4px 8px; margin-top: 6px; border-radius: var(--r-md); background: var(--ink-50); color: var(--ink-700); font-weight: 600; font-size: 12px; }
+#pagelist li.doc .dn { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; }
+#pagelist li.doc .dn > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#pagelist li.doc .dn svg.i { width: 15px; height: 15px; color: var(--ink-500); }
+#pagelist li.doc.cur { background: var(--brand-50); color: var(--brand-600); }
+#pagelist li.doc .tools { position: static; }
+#pagelist li.doc .tools button:disabled { opacity: .35; cursor: default; }
+.stamp-grid { display: grid; gap: 10px; }
+.stamp-grid .row label { color: var(--ink-700); font-size: 13px; min-width: 0; display: inline-flex; gap: 4px; align-items: center; }
+.stamp-grid .row > label:first-child:not(:has(input)) { color: var(--ink-500); font-size: 12px; min-width: 40px; }
 </style>
 </head>
 <body>
@@ -243,7 +253,7 @@ dialog td:first-child { color: var(--ink-500); white-space: nowrap; }
   <div id="toolbar" class="bar" aria-label="ツールバー"></div>
   <div id="main">
     <aside id="jump" aria-label="ページ">
-      <div class="panelhead">ページ <span class="lab" id="pagecount"></span></div>
+      <div class="panelhead"><span>ページ <span class="lab" id="pagecount"></span></span><button class="ib" id="binder-add" title="バインダーに文書を追加" hidden></button></div>
       <ul id="pagelist"></ul>
     </aside>
     <section id="center">
@@ -270,7 +280,7 @@ dialog td:first-child { color: var(--ink-500); white-space: nowrap; }
     <button class="ib" id="st-zin" title="拡大"></button>
   </footer>
 </div>
-<div id="dropzone">ここにドロップして開く（.xdw）</div>
+<div id="dropzone">ここにドロップ（.xdw / .xbd は開く・PDF や画像はページとして挿入）</div>
 <div id="toast" role="status"></div>
 <div id="printarea"></div>
 <input id="fileinput" type="file" accept=".xdw,.xbd" hidden>
@@ -280,7 +290,7 @@ dialog td:first-child { color: var(--ink-500); white-space: nowrap; }
   <div class="body">
     <label class="flabel">ファイル名 <input class="field" id="save-name"></label>
     <div class="opts">
-      <label><input type="radio" name="fmt" value="xdw" checked> <span>DocuWorks 文書 (.xdw) <span class="muted">— DocuWorks でそのまま開けます</span></span></label>
+      <label><input type="radio" name="fmt" value="xdw" checked> <span><span id="fmt-xdw-label">DocuWorks 文書 (.xdw)</span> <span class="muted">— DocuWorks でそのまま開けます</span></span></label>
       <label><input type="radio" name="fmt" value="pdf"> <span>PDF (.pdf) <span class="muted">— 画面と同じ見た目。文字の検索・コピーもできます</span></span></label>
       <label><input type="radio" name="fmt" value="txt"> <span>テキスト (.txt) <span class="muted">— 文書の文字だけ</span></span></label>
     </div>
@@ -292,6 +302,40 @@ dialog td:first-child { color: var(--ink-500); white-space: nowrap; }
   <header id="cf-title">確認</header>
   <div class="body"><p id="cf-text" class="note" style="font-size:13px;color:var(--ink-700)"></p></div>
   <footer><button class="pbtn" value="cancel">キャンセル</button><button class="pbtn" value="discard" id="cf-discard">保存しない</button><button class="pbtn primary" value="ok" id="cf-ok">OK</button></footer>
+</form></dialog>
+
+<dialog id="dlg-stamp"><form method="dialog">
+  <header>日付印</header>
+  <div class="body">
+    <div class="stamp-grid">
+      <label class="flabel">上の文字 <input class="field" id="stamp-top" placeholder="例: 受付・部署名" maxlength="20"></label>
+      <label class="flabel">日付 <input class="field" id="stamp-date" maxlength="20"></label>
+      <div class="row"><label><input type="radio" name="stamp-fmt" value="yy"> '26.10.01</label><label><input type="radio" name="stamp-fmt" value="yyyy"> 2026.10.01</label></div>
+      <label class="flabel">下の文字 <input class="field" id="stamp-bottom" placeholder="例: 名前" maxlength="20"></label>
+      <div class="row"><label>色</label><span id="stamp-colors" class="row"></span></div>
+      <div class="row"><label>大きさ</label><label><input type="radio" name="stamp-size" value="1500"> 15 mm</label><label><input type="radio" name="stamp-size" value="1800"> 18 mm</label><label><input type="radio" name="stamp-size" value="2100"> 21 mm</label></div>
+    </div>
+    <p class="muted">クリックした場所に押します。あとから右のパネルで直せます。</p>
+  </div>
+  <footer><button class="pbtn" value="cancel">キャンセル</button><button class="pbtn primary" value="ok">押す</button></footer>
+</form></dialog>
+
+<dialog id="dlg-range"><form method="dialog">
+  <header>ページを挿入</header>
+  <div class="body">
+    <p class="note" id="range-file" style="font-size:13px;color:var(--ink-700)"></p>
+    <div class="opts">
+      <label><input type="radio" name="range" value="all" checked> <span>すべてのページ</span></label>
+      <label><input type="radio" name="range" value="some"> <span>ページを指定 <input class="field" id="range-text" style="width:140px;margin-left:6px" onfocus="this.form.range.value='some'"> <span class="muted">例: 1-3, 5</span></span></label>
+    </div>
+  </div>
+  <footer><button class="pbtn" value="cancel">キャンセル</button><button class="pbtn primary" value="ok">挿入</button></footer>
+</form></dialog>
+
+<dialog id="dlg-prompt"><form method="dialog">
+  <header id="pr-title">入力</header>
+  <div class="body"><label class="flabel" id="pr-label">名前<input class="field" id="pr-input" maxlength="120"></label></div>
+  <footer><button class="pbtn" value="cancel">キャンセル</button><button class="pbtn primary" value="ok">OK</button></footer>
 </form></dialog>
 
 <dialog id="dlg-info"><form method="dialog">

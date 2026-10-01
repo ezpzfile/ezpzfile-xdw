@@ -136,7 +136,7 @@ attributes whose name ends in `(w`).
 
 ```
 [0] c013  document root            (binder .xbd: c014 → 1401 → 1402 → c013 …)
-  [1] 1303  pages                  lastmid
+  [1] 1303  pages                  lastmid = highest page number
     [2] 1301  page                 5 = size, 3 = number, lastmid
       [3] 1302  placement          52 = position, childdim = size
         [4] 8010  page content     7 = drawing, 58 = thumbnail, 61 = rotation,
@@ -152,13 +152,46 @@ attributes whose name ends in `(w`).
 |---|---|
 | 8010 | page content |
 | 8011 | text annotation |
+| 801a | sticky note (付箋) — not in the samples |
+| 801b | marker — not in the samples |
+| 802e | page form (header / footer) |
+| 8033 | date stamp (日付印) — not in the samples |
 | 803c | line |
 | 803d | rectangle |
 | 803e | ellipse |
 | 803f | picture annotation |
-| 8045 | marker / freehand (custom data) |
+| 8040 | received stamp — not in the samples |
+| 8042 | polygon — not in the samples |
+| 8045 | custom annotation (shapes of newer versions: polygon points in `%annotation_customdata`) |
 | 800f | embedded OLE object |
-| 802e | binder label |
+| c02f | link |
+
+The numbers are the annotation type ids of DocuWorks' published API
+(`XDW_AID_…`). The viewer draws every kind from its stored drawing (attribute
+7), including kinds it has no settings for [viewer: 8033 and 801a with only
+3, 5, 7 show their drawing].
+
+A blank page is a page record with no placement: 5, 3 and lastmid only
+[samples; viewer]. New pages and objects take the next number from their
+parent's `lastmid` (page list for pages, page for objects, binder list 1401
+for binder documents) and update it.
+
+#### Binders
+
+```
+[0] c014  binder           4 = binder name (UTF-16LE + one zero byte), %bindersize, %bindercolor
+  [1] 1401  documents      lastmid
+    [2] 1402               (no attributes)
+      [3] c013  document   4 = document name (Shift_JIS + zero), 3 = number
+        [4] 1303 …         the document's pages, as in a .xdw
+  [1] 1304
+```
+
+A standalone `.xdw` root (c013) usually has no attributes; adding it to a
+binder is: copy its subtree three levels deeper under a new 1402, give it 4
+and 3, copy the entries it refers to [viewer: added, renamed and reordered
+documents show in the document list with their names; Japanese names in
+Shift_JIS display correctly].
 
 Every object sits in a placement (1302) that gives its position (52, 1/100 mm
 from the page's top-left) and size (childdim) [viewer: moving 52 moves the
@@ -203,6 +236,16 @@ swap the page size, move and swap every placement, add 90 to every object's 61.
   LINECOLOR, DRAW, RECTCOLOR, `ATTR_FRAMETRANSPARENT`, `ATTR_FILLTRANSPARENT`
 - line (803c): `LINE_COLOR`, `LINE_WIDTH`, `LINE_STYLE`, `ARROW_SORT`,
   `LINE_DATA` (i32 LE point pairs)
+- picture (803f): only 57, 5, 61, 3 and 7; the drawing is kind 7 (below).
+  **Shown opaque**: white pixels cover the page [viewer: `ATTR_TRANSPARENT`,
+  `%ATTR_TRANSPARENT`, `ATTR_FILLTRANSPARENT`, `%Transparent` = 1 change
+  nothing]
+- text with a frame: `%FrameOnOff`; the viewer program also knows
+  `%FrameColor` and `%FrameThick` (names found in DWVLT.exe)
+- date stamp (8033) as written here: the drawing, plus `%TopField`,
+  `%BottomField`, `%DateStyle`, `%YearField`, `%MonthField`, `%DayField`,
+  `%DateOrder`, `%BorderColor` — the names of DocuWorks' published API, not
+  confirmed against files made by DocuWorks Desk
 
 ## 5. Drawings
 
@@ -255,10 +298,26 @@ DWc             draw the current picture: bounds, xDest, yDest, xSrc, ySrc,
 `R2_MASKPEN` (SETROP2 9) works as a highlighter: the colour multiplies with
 the page [viewer].
 
-### 5.3 Thumbnails
+### 5.3 Pictures stored as DIBs (kind 7)
 
-Kind 7 entries are small DIBs (BITMAPINFOHEADER + bits), referenced by
-attribute 58.
+Thumbnails (attribute 58, about 104 px wide, 8-bit with a 216-colour palette)
+and picture annotations use kind 7 bodies: 0x81 = the BITMAPINFO's length
+(where the bits start), 0x84 / 0x85 = the picture's size in 1/100 mm, 0x86 =
+
+```
+BITMAPINFO, then  u32 1, u32 stored size, u32 size, u32 rows,
+                  bits compressed with LHA -lh5-
+```
+
+[viewer: a picture annotation whose bits are stored plainly shows black].
+
+### 5.4 Picture pages
+
+Scanned and image pages are page EMFs at 600 dpi without a window, that draw
+JPEG pictures with `DWb` + `DWc` (the scanner writes strips of 24 rows). Each
+picture is a raw entry: `u32 total length, 0, width, height` + JPEG, listed in
+attribute 301… and in trailer 0x8d [viewer: a page made this way from one
+JPEG shows the picture].
 
 ## 6. Writing (what EZPZ File XDW does)
 
@@ -270,11 +329,18 @@ attribute 58.
 
 Files written this way open in DocuWorks Viewer Light with added text,
 highlighter, rectangle, ellipse and line annotations, moved annotations,
-turned, deleted and reordered pages ([experiments/results.md](../../experiments/results.md)).
+turned, deleted and reordered pages, sticky notes, date stamps, picture
+annotations, new blank / picture pages, pages copied from other documents,
+and edited binders ([experiments/results.md](../../experiments/results.md)).
+Copying a page copies every entry its records refer to (drawing, thumbnail,
+pictures, outsourced definitions) and renumbers the references.
 
 ## 7. Open questions
 
 - trailer 0x82, header 0x80 / 0x83, page attributes 57 / 62 / 69 / 14
 - the WMF comment records `DW\x02\x00…03` in old pages (not needed to draw)
-- 8045 custom annotation data, stamps (802e in documents), OLE objects
+- 8045 custom annotation data, OLE objects
+- the settings DocuWorks Desk writes for date stamps, sticky notes and
+  markers (no samples; the drawing is what the viewer uses)
+- making picture annotations see-through
 - signatures, passwords and DocuWorks 9+ features not present in the samples

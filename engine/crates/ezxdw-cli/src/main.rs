@@ -129,7 +129,12 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                         None => format!("{}", at.tag),
                     };
                     let mark = if at.class & 0x40 != 0 { "ᵖ" } else { "" };
-                    writeln!(out, "{pad}    {label}{mark} = {}", show_value(&at.value))?;
+                    if std::env::var_os("EZXDW_RAW").is_some() {
+                        let h: String = at.value.iter().map(|x| format!("{x:02x}")).collect();
+                        writeln!(out, "{pad}    {label}{mark} = {} <{h}>", show_value(&at.value))?;
+                    } else {
+                        writeln!(out, "{pad}    {label}{mark} = {}", show_value(&at.value))?;
+                    }
                 }
             }
         }
@@ -174,6 +179,12 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         }
         "pages" => {
             let d = ezxdw_core::doc::Document::open(b.clone())?;
+            if let Some(n) = d.binder_name() {
+                writeln!(out, "binder {n:?}")?;
+                for (k, bd) in d.binder_docs().iter().enumerate() {
+                    writeln!(out, "  document {} {:?}: pages {}..{}", k + 1, bd.name, bd.first_page + 1, bd.first_page + bd.pages)?;
+                }
+            }
             for (k, p) in d.pages.iter().enumerate() {
                 writeln!(out, "page {} {}x{}", k + 1, p.w, p.h)?;
                 for o in &p.objects {
@@ -327,6 +338,31 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                         }
                         d.add_picture(page, g("x"), g("y"), g("w"), g("h"), &px, pw, ph)?;
                     }
+                    "blank_page" => {
+                        d.insert_blank_page(g("at") as usize, op.get("w").and_then(|v| v.as_f64()).unwrap_or(21000.0), op.get("h").and_then(|v| v.as_f64()).unwrap_or(29700.0))?;
+                    }
+                    "image_page" => {
+                        let jpeg = std::fs::read(op["file"].as_str().ok_or("file")?)?;
+                        let (iw, ih) = ezxdw_core::pages::jpeg_size(&jpeg).ok_or("not a JPEG")?;
+                        let (pw, ph) = ezxdw_core::pages::a4_for(iw, ih);
+                        let j = ezxdw_core::pages::Jpeg { data: &jpeg, w: iw, h: ih };
+                        d.insert_image_page(g("at") as usize, pw, ph, &j, None, None)?;
+                    }
+                    "copy_pages" => {
+                        let other = ezxdw_core::doc::Document::open(std::fs::read(op["file"].as_str().ok_or("file")?)?)?;
+                        let which: Vec<usize> = match op.get("pages").and_then(|v| v.as_array()) {
+                            Some(v) => v.iter().filter_map(|x| x.as_u64()).map(|x| x as usize).collect(),
+                            None => (0..other.pages.len()).collect(),
+                        };
+                        d.insert_pages_from(g("at") as usize, &other, &which)?;
+                    }
+                    "binder_add" => {
+                        let other = ezxdw_core::doc::Document::open(std::fs::read(op["file"].as_str().ok_or("file")?)?)?;
+                        d.add_binder_docs(g("at") as usize, &other, op["name"].as_str().unwrap_or(""))?;
+                    }
+                    "binder_rename" => d.rename_binder_doc(g("doc") as usize, op["name"].as_str().unwrap_or(""))?,
+                    "binder_delete" => d.delete_binder_doc(g("doc") as usize)?,
+                    "binder_move" => d.move_binder_doc(g("from") as usize, g("to") as usize)?,
                     "delete_page" => d.delete_page(page)?,
                     "move_page" => d.move_page(g("from") as usize, g("to") as usize)?,
                     "delete" => d.delete_object(page, g("obj") as usize)?,

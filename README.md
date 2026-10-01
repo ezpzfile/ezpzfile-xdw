@@ -8,7 +8,7 @@ DocuWorks files, built from scratch.
 > そのまま `.xdw` で保存できるオープンソースです。ファイル形式の解析結果（仕様書）も公開しています。
 > ファイルは端末の外に送信されません。
 
-Status: **v0.1 — viewer + annotation editor that saves back to `.xdw` (developer preview).**
+Status: **v0.2 — viewer + editor that saves back to `.xdw` / `.xbd` (developer preview).**
 Not affiliated with FUJIFILM Business Innovation.
 
 ## What works
@@ -20,26 +20,35 @@ Tested on 43 public DocuWorks files (generation 7 and 10, `.xdw` and `.xbd`):
   picture records, JPEG picture strips, scanned/rotated pages, annotations
 - **saving back to `.xdw`**, the way DocuWorks itself saves (one segment appended,
   nothing earlier rewritten) — saved files open in **DocuWorks Viewer Light**
-- annotations: add **text, highlighter, rectangle, ellipse, line**; move, resize,
-  change, delete (existing annotations from DocuWorks too: move / delete)
-- pages: turn left / right, delete, reorder (drag in the page list)
+- annotations: add **text, sticky note (付箋), date stamp (日付印), highlighter,
+  rectangle, ellipse, line, picture**; move, resize, change, delete (existing
+  annotations from DocuWorks too: move / delete)
+- pages: turn left / right, delete, reorder (drag in the page list);
+  **insert** a blank page, pictures (JPEG / PNG / …), pages of another `.xdw` /
+  `.xbd`, or PDF pages (as pictures; needs the network once for pdf.js)
+- **binders (`.xbd`)**: documents shown in the page list; add `.xdw` files,
+  rename, reorder, remove documents
 - export: **PDF** (looks like the screen, text searchable/copyable), plain text; print
 - undo / redo
 
 The format findings, including the check value DocuWorks verifies and the
 driver's private drawing records, are in [docs/spec/XDW-FORMAT.md](docs/spec/XDW-FORMAT.md).
 
-Not yet: stamps (日付印) and sticky notes (付箋), inserting pages from other
-files, binder editing, signatures/passwords. See the [plan](docs/PLAN.ko.md).
+Not yet: signatures / passwords, text selection in pages, see-through picture
+annotations. Date stamps and sticky notes are drawn and open in Viewer Light;
+the settings DocuWorks Desk itself writes for them are not confirmed (no Desk
+to test with). See the [plan](docs/PLAN.ko.md).
 
 ## Editor
 
 `web/dist/ezxdw-editor.html` is the whole editor in one file: double-click it,
 drop a `.xdw` on the window, annotate, and save (Ctrl+S → `.xdw`). The screen
 follows DocuWorks Viewer (page list on the left, annotation tools on top,
-properties on the right) in the EZPZ File design. Keys: T text, H highlighter,
-R rectangle, E ellipse, L line, Esc select, Delete, arrows (Shift = 1 cm),
-Ctrl+Z / Ctrl+Y, Ctrl+S, Ctrl+Shift+S (save as PDF / text), Ctrl+P.
+properties on the right) in the EZPZ File design. Keys: T text, S sticky note,
+D date stamp, H highlighter, R rectangle, E ellipse, L line, Esc select,
+Delete, arrows (Shift = 1 cm), Ctrl+Z / Ctrl+Y, Ctrl+S, Ctrl+Shift+S (save as
+PDF / text), Ctrl+P. Drop a PDF or a picture on an open document to insert it
+as pages.
 
 ## Checked against the real viewer
 

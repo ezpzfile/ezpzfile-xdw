@@ -24,14 +24,55 @@ pub struct Emf {
     handles: u32,
     w: i32,
     h: i32,
+    /// 1/100 mm per unit
+    unit: f64,
+    /// drawn area in units (for the header's bounds), if not the whole
+    bounds: Option<[i32; 4]>,
 }
+
+/// 1/100 mm per device pixel of a page drawing (600 dpi, as the DocuWorks
+/// printer driver writes them).
+pub const PAGE_UNIT: f64 = 2540.0 / 600.0;
 
 impl Emf {
     /// A drawing `w` × `h` units.
     pub fn new(w: i32, h: i32) -> Emf {
-        let mut e = Emf { recs: Vec::new(), count: 0, handles: 1, w: w.max(1), h: h.max(1) };
+        let mut e = Emf { recs: Vec::new(), count: 0, handles: 1, w: w.max(1), h: h.max(1), unit: UNIT, bounds: None };
         e.rec(9, &[e.w, e.h]); // SETWINDOWEXTEX
         e
+    }
+
+    /// A page drawing `w` × `h` device pixels at 600 dpi, like the
+    /// DocuWorks printer driver's: no window, units are pixels.
+    pub fn page(w: i32, h: i32) -> Emf {
+        Emf { recs: Vec::new(), count: 0, handles: 1, w: w.max(1), h: h.max(1), unit: PAGE_UNIT, bounds: None }
+    }
+
+    /// SETSTRETCHBLTMODE (3 = COLORONCOLOR, 4 = HALFTONE).
+    pub fn stretch_mode(&mut self, m: i32) {
+        self.rec(21, &[m]);
+    }
+
+    fn comment(&mut self, data: &[u8]) {
+        let mut p = (data.len() as u32).to_le_bytes().to_vec();
+        p.extend_from_slice(data);
+        self.raw(70, &p);
+    }
+
+    /// Draw the next picture of the page's picture list (DocuWorks' own
+    /// records: `DWb` takes the next picture, `DWc` draws it like
+    /// STRETCHDIBITS) from the whole `pw` × `ph` source into `dst`
+    /// (x, y, w, h in units).
+    pub fn next_picture(&mut self, pw: i32, ph: i32, dst: [i32; 4]) {
+        self.comment(b"DWb\0");
+        let [x, y, w, h] = dst;
+        let mut d = b"DWc\0".to_vec();
+        for v in [x, y, x + w - 1, y + h - 1, x, y, 0, 0, pw, ph, 0, 0x00cc_0020, w, h] {
+            d.extend_from_slice(&v.to_le_bytes());
+        }
+        self.comment(&d);
+        let b = self.bounds.get_or_insert([x, y, x + w - 1, y + h - 1]);
+        *b = [b[0].min(x), b[1].min(y), b[2].max(x + w - 1), b[3].max(y + h - 1)];
     }
 
     fn rec(&mut self, t: u32, ints: &[i32]) {
@@ -249,7 +290,7 @@ impl Emf {
         put(&mut h, 1);
         put(&mut h, header_len as i32);
         // bounds (device = drawing units)
-        for v in [0, 0, self.w, self.h] {
+        for v in self.bounds.unwrap_or([0, 0, self.w, self.h]) {
             put(&mut h, v);
         }
         // frame (0.01 mm)
@@ -267,13 +308,13 @@ impl Emf {
         put(&mut h, 0); // nPalEntries
         put(&mut h, self.w); // device size in units
         put(&mut h, self.h);
-        put(&mut h, ((self.w as f64) * UNIT / 100.0).round().max(1.0) as i32); // millimetres
-        put(&mut h, ((self.h as f64) * UNIT / 100.0).round().max(1.0) as i32);
+        put(&mut h, ((self.w as f64) * self.unit / 100.0).round().max(1.0) as i32); // millimetres
+        put(&mut h, ((self.h as f64) * self.unit / 100.0).round().max(1.0) as i32);
         put(&mut h, 0); // cbPixelFormat
         put(&mut h, 0); // offPixelFormat
         put(&mut h, 0); // bOpenGL
-        put(&mut h, ((self.w as f64) * UNIT * 10.0).round() as i32); // micrometres
-        put(&mut h, ((self.h as f64) * UNIT * 10.0).round() as i32);
+        put(&mut h, ((self.w as f64) * self.unit * 10.0).round() as i32); // micrometres
+        put(&mut h, ((self.h as f64) * self.unit * 10.0).round() as i32);
         h.extend_from_slice(&self.recs);
         h
     }

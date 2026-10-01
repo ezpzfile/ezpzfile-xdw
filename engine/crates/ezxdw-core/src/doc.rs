@@ -37,9 +37,15 @@ pub const K_LINE: i64 = 0x803c;
 pub const K_RECT: i64 = 0x803d;
 pub const K_ELLIPSE: i64 = 0x803e;
 pub const K_PICTURE: i64 = 0x803f;
-pub const K_MARKER: i64 = 0x8045;
+pub const K_CUSTOM: i64 = 0x8045;
 pub const K_OLE: i64 = 0x800f;
-pub const K_STAMP: i64 = 0x802e;
+pub const K_PAGEFORM: i64 = 0x802e;
+pub const K_STAMP: i64 = 0x8033;
+pub const K_FUSEN: i64 = 0x801a;
+pub const K_MARKER: i64 = 0x801b;
+pub const K_POLYGON: i64 = 0x8042;
+pub const K_RECEIVED: i64 = 0x8040;
+pub const K_LINK: i64 = 0xc02f;
 
 /// What kind of thing an object is, in words.
 pub fn kind_name(k: i64) -> &'static str {
@@ -50,9 +56,15 @@ pub fn kind_name(k: i64) -> &'static str {
         K_RECT => "rectangle",
         K_ELLIPSE => "ellipse",
         K_PICTURE => "picture",
-        K_MARKER => "marker",
+        K_CUSTOM => "shape",
         K_OLE => "object",
-        K_STAMP => "stamp",
+        K_PAGEFORM => "header/footer",
+        K_STAMP => "date stamp",
+        K_FUSEN => "sticky note",
+        K_MARKER => "marker",
+        K_POLYGON => "polygon",
+        K_RECEIVED => "received stamp",
+        K_LINK => "link",
         _ => "annotation",
     }
 }

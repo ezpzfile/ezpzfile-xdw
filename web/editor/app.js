@@ -5,7 +5,7 @@
 //
 // Expects `__wbg_init`, `XdwDoc` and `WASM_B64` in scope (see build.sh).
 
-const ICONS = {"folder-open": "<path d=\"m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2\" />", "save": "<path d=\"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z\" /> <path d=\"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7\" /> <path d=\"M7 3v4a1 1 0 0 0 1 1h7\" />", "printer": "<path d=\"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2\" /> <path d=\"M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6\" /> <rect x=\"6\" y=\"14\" width=\"12\" height=\"8\" rx=\"1\" />", "undo-2": "<path d=\"M9 14 4 9l5-5\" /> <path d=\"M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11\" />", "redo-2": "<path d=\"m15 14 5-5-5-5\" /> <path d=\"M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13\" />", "search": "<circle cx=\"11\" cy=\"11\" r=\"8\" /> <path d=\"m21 21-4.3-4.3\" />", "minus": "<path d=\"M5 12h14\" />", "plus": "<path d=\"M5 12h14\" /> <path d=\"M12 5v14\" />", "chevron-down": "<path d=\"m6 9 6 6 6-6\" />", "chevron-right": "<path d=\"m9 18 6-6-6-6\" />", "panel-left": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /> <path d=\"M9 3v18\" />", "panel-right": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /> <path d=\"M15 3v18\" />", "type": "<polyline points=\"4 7 4 4 20 4 20 7\" /> <line x1=\"9\" x2=\"15\" y1=\"20\" y2=\"20\" /> <line x1=\"12\" x2=\"12\" y1=\"4\" y2=\"20\" />", "trash-2": "<path d=\"M3 6h18\" /> <path d=\"M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6\" /> <path d=\"M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2\" /> <line x1=\"10\" x2=\"10\" y1=\"11\" y2=\"17\" /> <line x1=\"14\" x2=\"14\" y1=\"11\" y2=\"17\" />", "x": "<path d=\"M18 6 6 18\" /> <path d=\"m6 6 12 12\" />", "check": "<path d=\"M20 6 9 17l-5-5\" />", "file-text": "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\" /> <path d=\"M14 2v4a2 2 0 0 0 2 2h4\" /> <path d=\"M10 9H8\" /> <path d=\"M16 13H8\" /> <path d=\"M16 17H8\" />", "info": "<circle cx=\"12\" cy=\"12\" r=\"10\" /> <path d=\"M12 16v-4\" /> <path d=\"M12 8h.01\" />", "keyboard": "<path d=\"M10 8h.01\" /> <path d=\"M12 12h.01\" /> <path d=\"M14 8h.01\" /> <path d=\"M16 12h.01\" /> <path d=\"M18 8h.01\" /> <path d=\"M6 8h.01\" /> <path d=\"M7 16h10\" /> <path d=\"M8 12h.01\" /> <rect width=\"20\" height=\"16\" x=\"2\" y=\"4\" rx=\"2\" />", "mouse-pointer-2": "<path d=\"M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z\" />", "highlighter": "<path d=\"m9 11-6 6v3h9l3-3\" /> <path d=\"m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4\" />", "square": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" />", "circle": "<circle cx=\"12\" cy=\"12\" r=\"10\" />", "line": "<path d=\"M5 19 19 5\" />", "rotate-ccw": "<path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\" /> <path d=\"M3 3v5h5\" />", "rotate-cw": "<path d=\"M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8\" /> <path d=\"M21 3v5h-5\" />", "arrow-up": "<path d=\"m5 12 7-7 7 7\" /> <path d=\"M12 19V5\" />", "arrow-down": "<path d=\"M12 5v14\" /> <path d=\"m19 12-7 7-7-7\" />", "maximize": "<path d=\"M8 3H5a2 2 0 0 0-2 2v3\" /> <path d=\"M21 8V5a2 2 0 0 0-2-2h-3\" /> <path d=\"M3 16v3a2 2 0 0 0 2 2h3\" /> <path d=\"M16 21h3a2 2 0 0 0 2-2v-3\" />", "file-down": "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\" /> <path d=\"M14 2v4a2 2 0 0 0 2 2h4\" /> <path d=\"M12 18v-6\" /> <path d=\"m9 15 3 3 3-3\" />"};
+const ICONS = {"folder-open": "<path d=\"m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2\" />", "save": "<path d=\"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z\" /> <path d=\"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7\" /> <path d=\"M7 3v4a1 1 0 0 0 1 1h7\" />", "printer": "<path d=\"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2\" /> <path d=\"M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6\" /> <rect x=\"6\" y=\"14\" width=\"12\" height=\"8\" rx=\"1\" />", "undo-2": "<path d=\"M9 14 4 9l5-5\" /> <path d=\"M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11\" />", "redo-2": "<path d=\"m15 14 5-5-5-5\" /> <path d=\"M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13\" />", "search": "<circle cx=\"11\" cy=\"11\" r=\"8\" /> <path d=\"m21 21-4.3-4.3\" />", "minus": "<path d=\"M5 12h14\" />", "plus": "<path d=\"M5 12h14\" /> <path d=\"M12 5v14\" />", "chevron-down": "<path d=\"m6 9 6 6 6-6\" />", "chevron-right": "<path d=\"m9 18 6-6-6-6\" />", "panel-left": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /> <path d=\"M9 3v18\" />", "panel-right": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /> <path d=\"M15 3v18\" />", "type": "<polyline points=\"4 7 4 4 20 4 20 7\" /> <line x1=\"9\" x2=\"15\" y1=\"20\" y2=\"20\" /> <line x1=\"12\" x2=\"12\" y1=\"4\" y2=\"20\" />", "trash-2": "<path d=\"M3 6h18\" /> <path d=\"M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6\" /> <path d=\"M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2\" /> <line x1=\"10\" x2=\"10\" y1=\"11\" y2=\"17\" /> <line x1=\"14\" x2=\"14\" y1=\"11\" y2=\"17\" />", "x": "<path d=\"M18 6 6 18\" /> <path d=\"m6 6 12 12\" />", "check": "<path d=\"M20 6 9 17l-5-5\" />", "file-text": "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\" /> <path d=\"M14 2v4a2 2 0 0 0 2 2h4\" /> <path d=\"M10 9H8\" /> <path d=\"M16 13H8\" /> <path d=\"M16 17H8\" />", "info": "<circle cx=\"12\" cy=\"12\" r=\"10\" /> <path d=\"M12 16v-4\" /> <path d=\"M12 8h.01\" />", "keyboard": "<path d=\"M10 8h.01\" /> <path d=\"M12 12h.01\" /> <path d=\"M14 8h.01\" /> <path d=\"M16 12h.01\" /> <path d=\"M18 8h.01\" /> <path d=\"M6 8h.01\" /> <path d=\"M7 16h10\" /> <path d=\"M8 12h.01\" /> <rect width=\"20\" height=\"16\" x=\"2\" y=\"4\" rx=\"2\" />", "mouse-pointer-2": "<path d=\"M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z\" />", "highlighter": "<path d=\"m9 11-6 6v3h9l3-3\" /> <path d=\"m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4\" />", "square": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" />", "circle": "<circle cx=\"12\" cy=\"12\" r=\"10\" />", "line": "<path d=\"M5 19 19 5\" />", "rotate-ccw": "<path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\" /> <path d=\"M3 3v5h5\" />", "rotate-cw": "<path d=\"M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8\" /> <path d=\"M21 3v5h-5\" />", "arrow-up": "<path d=\"m5 12 7-7 7 7\" /> <path d=\"M12 19V5\" />", "arrow-down": "<path d=\"M12 5v14\" /> <path d=\"m19 12-7 7-7-7\" />", "maximize": "<path d=\"M8 3H5a2 2 0 0 0-2 2v3\" /> <path d=\"M21 8V5a2 2 0 0 0-2-2h-3\" /> <path d=\"M3 16v3a2 2 0 0 0 2 2h3\" /> <path d=\"M16 21h3a2 2 0 0 0 2-2v-3\" />", "file-down": "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\" /> <path d=\"M14 2v4a2 2 0 0 0 2 2h4\" /> <path d=\"M12 18v-6\" /> <path d=\"m9 15 3 3 3-3\" />", "sticky-note": "<path d=\"M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z\" /> <path d=\"M15 3v6h6\" />", "stamp": "<path d=\"M5 22h14\" /> <path d=\"M19.27 13.73A2.5 2.5 0 0 0 17.5 13h-11A2.5 2.5 0 0 0 4 15.5V17a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1.5c0-.66-.26-1.3-.73-1.77Z\" /> <path d=\"M14 13V8.5C14 7 15 7 15 5a3 3 0 0 0-3-3c-1.69 0-3 1-3 3 0 2 1 2 1 3.5V13\" />", "file-plus": "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\" /> <path d=\"M14 2v4a2 2 0 0 0 2 2h4\" /> <path d=\"M9 15h6\" /> <path d=\"M12 18v-6\" />", "image-plus": "<path d=\"M16 5h6\" /> <path d=\"M19 2v6\" /> <path d=\"M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5\" /> <path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\" /> <circle cx=\"9\" cy=\"9\" r=\"2\" />", "files": "<path d=\"M20 7h-3a2 2 0 0 1-2-2V2\" /> <path d=\"M9 18a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7l4 4v10a2 2 0 0 1-2 2Z\" /> <path d=\"M3 7.6v12.8A1.6 1.6 0 0 0 4.6 22h9.8\" />", "pencil": "<path d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\" /> <path d=\"m15 5 4 4\" />", "chevron-up": "<path d=\"m18 15-6-6-6 6\" />"};
 
 const ic = (n, cls = "i") => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ""}</svg>`;
 
@@ -52,11 +52,24 @@ const S = {
   cur: 0,
   observer: null,
   thumbs: [],
+  binder: null,      // {name, docs:[{name, first_page, pages}]} for a .xbd
+  ext: ".xdw",
+  sticky: store.get("sticky", "#fff59d"),
+  stamp: store.get("stamp", { top: "", bottom: "", fmt: "yy", size: 1800, color: "#e60012" }),
 };
 const sc = () => S.zoom * U;
 
 const COLORS = ["#131a2e", "#d40000", "#0155ff", "#00a36c", "#f08c00", "#8b5cf6"];
 const HIGHLIGHTS = ["#ffe14d", "#9cf0b0", "#9fd3ff", "#ffb3d9", "#ffc58a"];
+const STICKIES = ["#fff59d", "#c8f7c5", "#bfe3ff", "#ffd1e8", "#ffe0b2"];
+const STAMP_COLORS = ["#e60012", "#0155ff", "#131a2e"];
+/** A darker shade (for a sticky note's edge). */
+const darker = (n) => (Math.round(((n >> 16) & 255) * 0.78) << 16) | (Math.round(((n >> 8) & 255) * 0.78) << 8) | Math.round((n & 255) * 0.78);
+function stampDate(fmt) {
+  const d = new Date();
+  const p = (v) => String(v).padStart(2, "0");
+  return fmt === "yyyy" ? `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}` : `'${p(d.getFullYear() % 100)}.${p(d.getMonth() + 1)}.${p(d.getDate())}`;
+}
 
 // ------------------------------------------------------------------ boot
 function b64bytes(s) { const bin = atob(s); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
@@ -268,7 +281,10 @@ async function drawPage(i, force = false) {
 function buildThumbs() {
   const list = $("#pagelist");
   list.replaceChildren();
+  S.binder = JSON.parse(S.ed.binder());
+  const starts = new Map((S.binder ? S.binder.docs : []).map((d, k) => [d.first_page, k]));
   S.thumbs = S.info.map((p, i) => {
+    if (starts.has(i)) list.append(docHeader(starts.get(i)));
     const c = el("canvas");
     const li = el("li", { "data-i": i, draggable: "true" },
       el("span", { class: "thumb" }, c),
@@ -289,8 +305,26 @@ function buildThumbs() {
     list.append(li);
     return { c, done: false };
   });
-  $("#pagecount").textContent = S.info.length + " ページ";
+  $("#pagecount").textContent = S.binder ? `${S.binder.docs.length} 文書 · ${S.info.length} ページ` : S.info.length + " ページ";
+  $("#binder-add").hidden = !S.binder;
+  $("#menu-binder").hidden = !S.binder;
   drawThumbs();
+}
+
+function docHeader(k) {
+  const d = S.binder.docs[k];
+  const n = S.binder.docs.length;
+  const li = el("li", { class: "doc", "data-doc": k, title: d.name },
+    el("span", { class: "dn", html: ic("file-text") + "<span></span>" }),
+    el("span", { class: "tools" },
+      el("button", { title: "文書名を変更", html: ic("pencil"), onclick: (e) => { e.stopPropagation(); renameDoc(k); } }),
+      el("button", { title: "文書を上へ", html: ic("chevron-up"), disabled: k === 0, onclick: (e) => { e.stopPropagation(); moveDoc(k, k - 1); } }),
+      el("button", { title: "文書を下へ", html: ic("chevron-down"), disabled: k === n - 1, onclick: (e) => { e.stopPropagation(); moveDoc(k, k + 1); } }),
+      el("button", { title: "文書をバインダーから外す", html: ic("trash-2"), disabled: n <= 1, onclick: (e) => { e.stopPropagation(); deleteDoc(k); } })));
+  $("span span", li).textContent = d.name || "（名前なし）";
+  li.addEventListener("click", () => gotoPage(d.first_page));
+  li.addEventListener("dblclick", () => renameDoc(k));
+  return li;
 }
 
 async function drawThumbs() {
@@ -306,7 +340,17 @@ async function drawThumbs() {
 }
 
 function markCurrent() {
-  $$("#pagelist li").forEach((li, k) => li.classList.toggle("cur", k === S.cur));
+  $$("#pagelist li[data-i]").forEach((li) => li.classList.toggle("cur", +li.dataset.i === S.cur));
+  const bd = docOf(S.cur);
+  $$("#pagelist li.doc").forEach((li) => li.classList.toggle("cur", bd != null && +li.dataset.doc === bd));
+}
+
+/** The binder document page `i` belongs to (null for a plain document). */
+function docOf(i) {
+  if (!S.binder) return null;
+  let k = 0;
+  S.binder.docs.forEach((d, j) => { if (i >= d.first_page) k = j; });
+  return k;
 }
 
 function gotoPage(i) {
@@ -390,8 +434,8 @@ function setTool(t) {
   S.tool = t;
   $$("[data-tool]").forEach((b) => b.classList.toggle("on", b.dataset.tool === t));
   S.pages.forEach((p) => {
-    p.div.classList.toggle("tool-draw", t !== "select" && t !== "text");
-    p.div.classList.toggle("tool-text", t === "text");
+    p.div.classList.toggle("tool-draw", t !== "select" && t !== "text" && t !== "sticky");
+    p.div.classList.toggle("tool-text", t === "text" || t === "sticky");
   });
   if (t !== "select") select(null);
 }
@@ -418,9 +462,14 @@ function bindPage(div, i) {
     if (e.target.closest(".textedit")) return;
     const [u, v] = pos(e);
     S.cur = i; markCurrent(); updateStatus();
-    if (S.tool === "text") {
+    if (S.tool === "text" || S.tool === "sticky") {
       e.preventDefault();
-      openTextEditor(i, u, v, null);
+      openTextEditor(i, u, v, null, S.tool === "sticky" ? stickyLook() : null);
+      return;
+    }
+    if (S.tool === "stamp") {
+      e.preventDefault();
+      placeStamp(i, u, v);
       return;
     }
     if (S.tool !== "select") {
@@ -500,6 +549,7 @@ function bindPage(div, i) {
     if (k < 0) return;
     const o = S.info[i].objects[k];
     if (o.kind === "text" && o.shape) openTextEditor(i, o.x, o.y, k);
+    else if (o.shape && o.shape.type === "stamp") select(i, k);
   });
 }
 
@@ -525,16 +575,22 @@ function scaleShape(shape, o, g) {
 }
 
 // ------------------------------------------------------------------ text annotations
-function openTextEditor(p, x, y, k) {
+function stickyLook() {
+  const bg = num(S.sticky);
+  return { background: bg, frame: darker(bg), color: 0x131a2e };
+}
+
+function openTextEditor(p, x, y, k, look) {
   closeTextEditor(true);
   const o = k == null ? null : S.info[p].objects[k];
-  const shape = o ? o.shape : { type: "text", text: "", size: S.size, color: num(S.color), bold: false };
+  const shape = o ? o.shape : { type: "text", text: "", size: S.size, color: num(S.color), bold: false, ...(look || {}) };
   const ta = el("textarea", { class: "textedit", spellcheck: "false" });
   ta.value = shape.text;
   const px = shape.size * 96 / 72 * S.zoom;
   ta.style.fontSize = px + "px";
   ta.style.color = hex(shape.color);
   ta.style.fontWeight = shape.bold ? "700" : "400";
+  if (shape.background != null) ta.style.background = hex(shape.background);
   ta.style.left = x * sc() + "px";
   ta.style.top = y * sc() + "px";
   const fit = () => {
@@ -630,8 +686,9 @@ function renderProps() {
   }
   const { p, o } = S.sel;
   const ob = S.info[p].objects[o];
-  const names = { text: "テキスト", rectangle: "四角形", ellipse: "楕円", line: "直線", marker: "マーカー", picture: "画像", stamp: "スタンプ", object: "オブジェクト", annotation: "注釈" };
-  const kind = ob.shape && ob.shape.type === "rect" && ob.shape.highlight ? "蛍光ペン" : names[ob.kind] || ob.kind;
+  const names = { text: "テキスト", rectangle: "四角形", ellipse: "楕円", line: "直線", marker: "マーカー", picture: "画像", "date stamp": "日付印", "sticky note": "付箋", "received stamp": "受信印", shape: "図形", polygon: "多角形", link: "リンク", "header/footer": "ページフォーム", object: "オブジェクト", annotation: "注釈" };
+  const isSticky = ob.shape && ob.shape.type === "text" && ob.shape.background != null && ob.shape.frame != null;
+  const kind = ob.shape && ob.shape.type === "rect" && ob.shape.highlight ? "蛍光ペン" : isSticky ? "付箋" : names[ob.kind] || ob.kind;
   const box = el("div", { class: "infobody" });
   box.append(el("div", { class: "kv" },
     el("span", { text: "種類" }), el("b", { text: kind }),
@@ -662,7 +719,17 @@ function renderProps() {
     const bold = el("button", { class: "pbtn" + (s.bold ? " on" : ""), text: "太字", onclick: () => change({ bold: !s.bold }) });
     box.append(el("div", { class: "row" }, el("label", { text: "サイズ" }), size, el("span", { class: "lab", text: "pt" }), bold));
     box.append(colorRow("色", s.color, COLORS, (c) => change({ color: c ?? 0 })));
-    box.append(colorRow("背景", s.background, ["#ffffff", ...HIGHLIGHTS], (c) => change({ background: c }), true));
+    if (isSticky) box.append(colorRow("付箋", s.background, STICKIES, (c) => change(c == null ? { background: null, frame: null } : { background: c, frame: darker(c) }), true));
+    else box.append(colorRow("背景", s.background, ["#ffffff", ...HIGHLIGHTS], (c) => change({ background: c }), true));
+  } else if (s && s.type === "stamp") {
+    const fieldRow = (label, key) => {
+      const inp = el("input", { class: "field", value: s[key] });
+      inp.addEventListener("change", () => change({ [key]: inp.value }));
+      return el("label", { class: "flabel" }, label, inp);
+    };
+    box.append(fieldRow("上の文字", "top"), fieldRow("日付", "date"), fieldRow("下の文字", "bottom"));
+    box.append(el("div", { class: "row" }, el("button", { class: "pbtn", text: "今日の日付にする", onclick: () => change({ date: stampDate(S.stamp.fmt) }) })));
+    box.append(colorRow("色", s.color, STAMP_COLORS, (c) => change({ color: c ?? num(STAMP_COLORS[0]) })));
   } else if (s && s.type === "rect" && s.highlight) {
     box.append(colorRow("色", s.fill, HIGHLIGHTS, (c) => change({ fill: c ?? num(S.hl) })));
   } else if (s && (s.type === "rect" || s.type === "ellipse")) {
@@ -673,7 +740,7 @@ function renderProps() {
     box.append(colorRow("色", s.color, COLORS, (c) => change({ color: c ?? 0 })));
     box.append(widthRow(s.width, (w) => change({ width: w })));
   } else if (ob.kind !== "page") {
-    box.append(el("p", { class: "note", text: "この注釈は移動と削除ができます（中身の変更は DocuWorks で）。" }));
+    box.append(el("p", { class: "note", text: ob.kind === "picture" ? "画像の注釈です。移動・削除ができます（DocuWorks では白い部分も不透明に表示されます）。" : "この注釈は移動と削除ができます（中身の変更は DocuWorks で）。" }));
   }
   if (ob.kind !== "page") box.append(el("div", { class: "row" }, el("button", { class: "pbtn", html: ic("trash-2") + "削除", onclick: deleteSelected })));
   host.append(box);
@@ -701,6 +768,7 @@ async function openFile(file) {
     if (S.ed) S.ed.free();
     S.ed = ed;
     S.name = file.name.replace(/\.(xdw|xbd)$/i, "");
+    S.ext = ed.binder() !== "null" ? ".xbd" : ".xdw";
     S.sel = null;
     S.cur = 0;
     S.info = JSON.parse(ed.pages());
@@ -731,8 +799,9 @@ function saveXdw(name) {
   if (!S.ed) return;
   try {
     const b = S.ed.save();
-    download(b, (name || S.name) + ".xdw", "application/vnd.fujixerox.docuworks");
-    toast("保存しました（DocuWorks 文書）");
+    const binder = S.ext === ".xbd";
+    download(b, (name || S.name) + S.ext, binder ? "application/vnd.fujixerox.docuworks.binder" : "application/vnd.fujixerox.docuworks");
+    toast(binder ? "保存しました（DocuWorks バインダー）" : "保存しました（DocuWorks 文書）");
     updateChrome();
   } catch (e) {
     toast("保存できませんでした: " + (e.message || e));
@@ -775,6 +844,7 @@ async function saveAs() {
   if (!S.ed) return;
   const d = $("#dlg-save");
   $("#save-name").value = S.name;
+  $("#fmt-xdw-label").textContent = S.ext === ".xbd" ? "DocuWorks バインダー (.xbd)" : "DocuWorks 文書 (.xdw)";
   d.showModal();
   const r = await new Promise((res) => d.addEventListener("close", () => res(d.returnValue), { once: true }));
   if (r !== "ok") return;
@@ -800,6 +870,284 @@ function confirmBox(title, text, withDiscard) {
   $("#cf-ok").textContent = withDiscard ? "保存" : "OK";
   d.showModal();
   return new Promise((res) => d.addEventListener("close", () => res(d.returnValue), { once: true }));
+}
+
+// ------------------------------------------------------------------ date stamp
+async function placeStamp(p, u, v) {
+  const r = await stampDialog();
+  if (!r) return;
+  const size = S.stamp.size || 1800;
+  const pg = S.info[p];
+  const x = Math.max(0, Math.min(pg.w - size, u - size / 2)), y = Math.max(0, Math.min(pg.h - size, v - size / 2));
+  act(() => ({ pages: [p], sel: { p, o: S.ed.addAnnotation(p, x, y, size, size, JSON.stringify({ type: "stamp", ...r })) } }));
+}
+
+function stampDialog() {
+  const d = $("#dlg-stamp");
+  const st = S.stamp;
+  $("#stamp-top").value = st.top || "";
+  $("#stamp-bottom").value = st.bottom || "";
+  $("#stamp-date").value = stampDate(st.fmt);
+  $$("input[name=stamp-fmt]", d).forEach((r) => { r.checked = r.value === (st.fmt || "yy"); });
+  $$("input[name=stamp-size]", d).forEach((r) => { r.checked = +r.value === (st.size || 1800); });
+  let color = st.color || STAMP_COLORS[0];
+  const sw = $("#stamp-colors");
+  const paint = () => sw.replaceChildren(...STAMP_COLORS.map((c) => el("button", { type: "button", class: "swatch", style: `background:${c};${c === color ? "outline:2px solid var(--brand-500);outline-offset:2px" : ""}`, onclick: () => { color = c; paint(); } })));
+  paint();
+  d.showModal();
+  return new Promise((res) => d.addEventListener("close", () => {
+    if (d.returnValue !== "ok") return res(null);
+    const fmt = ($("input[name=stamp-fmt]:checked", d) || {}).value || "yy";
+    const size = +(($("input[name=stamp-size]:checked", d) || {}).value || 1800);
+    S.stamp = { top: $("#stamp-top").value.trim(), bottom: $("#stamp-bottom").value.trim(), fmt, size, color };
+    store.set("stamp", S.stamp);
+    res({ top: S.stamp.top, date: $("#stamp-date").value.trim() || stampDate(fmt), bottom: S.stamp.bottom, color: num(color) });
+  }, { once: true }));
+}
+
+// ------------------------------------------------------------------ pictures and pages from files
+function pickFile(accept, multiple) {
+  return new Promise((res) => {
+    const inp = el("input", { type: "file", accept, hidden: true });
+    if (multiple) inp.multiple = true;
+    inp.addEventListener("change", () => { res(Array.from(inp.files || [])); inp.remove(); });
+    document.body.append(inp);
+    inp.click();
+  });
+}
+
+/** Draw a picture file on a canvas (at most `max` pixels on its long side, on white). */
+async function fileCanvas(file, max) {
+  const bmp = await createImageBitmap(file);
+  const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+  const g = c.getContext("2d");
+  g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(bmp, 0, 0, c.width, c.height);
+  bmp.close && bmp.close();
+  return c;
+}
+
+const jpegOf = async (c, q = 0.9) => new Uint8Array(await (await new Promise((r) => c.toBlob(r, "image/jpeg", q))).arrayBuffer());
+
+/** The small picture DocuWorks keeps for a page: about 104 px wide. */
+function thumbOf(c, pw, ph) {
+  const tw = 104, th = Math.max(1, Math.round(104 * ph / pw));
+  const t = document.createElement("canvas");
+  t.width = tw; t.height = th;
+  const g = t.getContext("2d");
+  g.fillStyle = "#fff"; g.fillRect(0, 0, tw, th);
+  const k = Math.min(tw / c.width, th / c.height);
+  g.drawImage(c, (tw - c.width * k) / 2, (th - c.height * k) / 2, c.width * k, c.height * k);
+  return { rgba: new Uint8Array(g.getImageData(0, 0, tw, th).data.buffer), w: tw, h: th };
+}
+
+async function pickPicture() {
+  const [f] = await pickFile("image/*");
+  if (!f) return;
+  try {
+    const c = await fileCanvas(f, 1600);
+    const p = S.cur, pg = S.info[p];
+    let w = Math.min(pg.w * 0.5, c.width * 2540 / 150), h = w * c.height / c.width;
+    if (h > pg.h * 0.6) { h = pg.h * 0.6; w = h * c.width / c.height; }
+    const rgba = new Uint8Array(c.getContext("2d").getImageData(0, 0, c.width, c.height).data.buffer);
+    act(() => ({ pages: [p], sel: { p, o: S.ed.addPicture(p, (pg.w - w) / 2, (pg.h - h) / 2, w, h, rgba, c.width, c.height) } }));
+    toast("画像を貼りました（DocuWorks では白い部分も不透明に表示されます）", 4000);
+  } catch (e) {
+    toast("画像を読めませんでした: " + (e.message || e));
+  }
+}
+
+function insertBlank(at) {
+  const ref = S.info[Math.min(at, S.info.length) - 1] || S.info[0];
+  act(() => { S.ed.insertBlankPage(at, ref.w, ref.h); S.cur = at; return { pages: "all", sel: null }; });
+  setTimeout(() => gotoPage(at), 50);
+}
+
+async function pickInsert(at) {
+  const files = await pickFile(".xdw,.xbd,.pdf,image/*", true);
+  if (!files.length) return;
+  await insertFiles(files, at);
+}
+
+/** Insert pages from files (DocuWorks, PDF, pictures) at position `at`. */
+async function insertFiles(files, at) {
+  const start = at;
+  let total = 0;
+  const before = S.info.length;
+  for (const f of files) {
+    try {
+      const n = await insertOne(f, at);
+      at += n; total += n;
+    } catch (e) {
+      console.error(e);
+      toast(`${f.name}: ${e.message || e}`, 5000);
+    }
+  }
+  if (!total) return;
+  S.sel = null;
+  refresh("all");
+  S.cur = Math.min(start, S.info.length - 1);
+  setTimeout(() => gotoPage(S.cur), 50);
+  toast(`${S.info.length - before} ページを挿入しました`);
+}
+
+async function insertOne(f, at) {
+  const name = f.name.toLowerCase();
+  if (/\.(xdw|xbd)$/.test(name)) {
+    const bytes = new Uint8Array(await f.arrayBuffer());
+    const tmp = new XdwDoc(bytes);
+    const n = tmp.pageCount();
+    tmp.free();
+    let which = "";
+    if (n > 1) {
+      const r = await rangeDialog(f.name, n);
+      if (r === null) return 0;
+      which = r;
+    }
+    return S.ed.insertPagesFrom(at, bytes, which);
+  }
+  if (/\.pdf$/.test(name) || f.type === "application/pdf") return insertPdf(f, at);
+  if (/^image\//.test(f.type) || /\.(jpe?g|png|gif|webp|bmp)$/.test(name)) {
+    const c = await fileCanvas(f, 4000);
+    const [pw, ph] = c.width > c.height ? [29700, 21000] : [21000, 29700];
+    const t = thumbOf(c, pw, ph);
+    S.ed.insertImagePage(at, pw, ph, await jpegOf(c), c.width, c.height, t.rgba, t.w, t.h);
+    return 1;
+  }
+  throw new Error("この種類のファイルは挿入できません");
+}
+
+/** Ask which pages to take: "" = all, or a JSON list of page numbers from 0. */
+function rangeDialog(fname, n) {
+  const d = $("#dlg-range");
+  $("#range-file").textContent = `${fname}（${n} ページ）`;
+  $("#range-text").value = `1-${n}`;
+  $("input[name=range][value=all]", d).checked = true;
+  d.showModal();
+  return new Promise((res) => d.addEventListener("close", () => {
+    if (d.returnValue !== "ok") return res(null);
+    if ($("input[name=range]:checked", d).value === "all") return res("");
+    const pages = [];
+    for (const part of $("#range-text").value.split(/[,、\s]+/)) {
+      const m = part.match(/^(\d+)(?:[-~〜](\d+))?$/);
+      if (!m) continue;
+      const a = +m[1], b = m[2] ? +m[2] : a;
+      for (let k = Math.min(a, b); k <= Math.max(a, b); k++) if (k >= 1 && k <= n) pages.push(k - 1);
+    }
+    res(pages.length ? JSON.stringify(pages) : null);
+  }, { once: true }));
+}
+
+/** Paper sizes within 0.6 mm of a standard one become exactly that size. */
+function snapPaper(w, h) {
+  const std = [[21000, 29700], [29700, 42000], [14800, 21000], [25700, 36400], [18200, 25700], [21590, 27940], [21590, 35560]];
+  for (const [a, b] of std) for (const [x, y] of [[a, b], [b, a]]) if (Math.abs(w - x) < 60 && Math.abs(h - y) < 60) return [x, y];
+  return [Math.round(w), Math.round(h)];
+}
+
+let PDFJS = null;
+async function pdfjs() {
+  if (PDFJS) return PDFJS;
+  const base = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+  await new Promise((res, rej) => {
+    const sc = document.createElement("script");
+    sc.src = base + "pdf.min.js";
+    sc.onload = res;
+    sc.onerror = () => rej(new Error("PDF を読む部品を取得できませんでした（インターネット接続が必要です）"));
+    document.head.append(sc);
+  });
+  const lib = window.pdfjsLib;
+  try {
+    // a worker from another site is not allowed: run it from a local copy
+    const code = await (await fetch(base + "pdf.worker.min.js")).text();
+    lib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
+  } catch {
+    lib.GlobalWorkerOptions.workerSrc = base + "pdf.worker.min.js";
+  }
+  return (PDFJS = lib);
+}
+
+/** PDF pages become picture pages (200 dpi). */
+async function insertPdf(f, at) {
+  toast("PDF を読み込んでいます…", 60000);
+  const lib = await pdfjs();
+  const pdf = await lib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
+  const n = pdf.numPages;
+  let which = [0];
+  if (n > 1) {
+    toast("", 1);
+    const r = await rangeDialog(f.name, n);
+    if (r === null) return 0;
+    which = r ? JSON.parse(r) : [...Array(n).keys()];
+  }
+  let done = 0;
+  for (const k of which) {
+    toast(`PDF を挿入しています… ${done + 1} / ${which.length}`, 60000);
+    const page = await pdf.getPage(k + 1);
+    const v1 = page.getViewport({ scale: 1 });
+    const [pw, ph] = snapPaper(v1.width * 2540 / 72, v1.height * 2540 / 72);
+    const vp = page.getViewport({ scale: 200 / 72 });
+    const c = document.createElement("canvas");
+    c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+    const g = c.getContext("2d");
+    g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+    await page.render({ canvasContext: g, viewport: vp }).promise;
+    const t = thumbOf(c, pw, ph);
+    S.ed.insertImagePage(at + done, pw, ph, await jpegOf(c, 0.88), c.width, c.height, t.rgba, t.w, t.h);
+    done++;
+  }
+  pdf.destroy && pdf.destroy();
+  return done;
+}
+
+// ------------------------------------------------------------------ binder documents
+function promptBox(title, label, value) {
+  const d = $("#dlg-prompt");
+  $("#pr-title").textContent = title;
+  $("#pr-label").firstChild.textContent = label;
+  $("#pr-input").value = value || "";
+  d.showModal();
+  setTimeout(() => { $("#pr-input").focus(); $("#pr-input").select(); }, 0);
+  return new Promise((res) => d.addEventListener("close", () => res(d.returnValue === "ok" ? $("#pr-input").value.trim() : null), { once: true }));
+}
+
+async function renameDoc(k) {
+  if (!S.binder || k == null) return;
+  const d = S.binder.docs[k];
+  const name = await promptBox("文書名の変更", "文書名", d.name);
+  if (!name || name === d.name) return;
+  act(() => { S.ed.renameBinderDoc(k, name); return { pages: "all" }; });
+}
+
+function moveDoc(k, to) {
+  if (!S.binder || k == null || to < 0 || to >= S.binder.docs.length) return;
+  act(() => { S.ed.moveBinderDoc(k, to); return { pages: "all", sel: null }; });
+  setTimeout(() => gotoPage(S.binder.docs[to].first_page), 50);
+}
+
+async function deleteDoc(k) {
+  if (!S.binder || k == null) return;
+  const d = S.binder.docs[k];
+  const r = await confirmBox("文書を外す", `「${d.name}」（${d.pages} ページ）をバインダーから外しますか？（元に戻すことができます）`, false);
+  if (r !== "ok") return;
+  act(() => { S.ed.deleteBinderDoc(k); return { pages: "all", sel: null }; });
+}
+
+async function pickBinderAdd() {
+  if (!S.binder) return;
+  const files = await pickFile(".xdw,.xbd", true);
+  let at = docOf(S.cur) + 1, added = 0;
+  for (const f of files) {
+    try {
+      const n = S.ed.addBinderDocs(at, new Uint8Array(await f.arrayBuffer()), f.name.replace(/\.(xdw|xbd)$/i, ""));
+      at += n; added += n;
+    } catch (e) {
+      toast(`${f.name}: ${e.message || e}`, 5000);
+    }
+  }
+  if (added) { refresh("all"); toast(`${added} 文書を追加しました`); }
 }
 
 // ------------------------------------------------------------------ chrome
@@ -831,6 +1179,9 @@ function buildMenus() {
       ["プロパティ", "", () => $("#main").classList.toggle("no-palette")],
     ]],
     ["ページ", "P", [
+      ["白紙ページを挿入", "", () => S.ed && insertBlank(S.cur + 1)],
+      ["ファイルからページを挿入…", "", () => S.ed && pickInsert(S.cur + 1)],
+      null,
       ["左へ 90° 回転", "", () => S.ed && rotatePage(S.cur, 3)],
       ["右へ 90° 回転", "", () => S.ed && rotatePage(S.cur, 1)],
       ["180° 回転", "", () => S.ed && rotatePage(S.cur, 2)],
@@ -847,11 +1198,24 @@ function buildMenus() {
       ["四角形", "R", () => setTool("rect")],
       ["楕円", "E", () => setTool("ellipse")],
       ["直線", "L", () => setTool("line")],
+      null,
+      ["付箋", "S", () => setTool("sticky")],
+      ["日付印", "D", () => setTool("stamp")],
+      ["画像を貼る…", "", () => S.ed && pickPicture()],
+    ]],
+    ["バインダー", "B", [
+      ["文書を追加…", "", () => pickBinderAdd(), () => !!S.binder],
+      ["文書名を変更…", "", () => renameDoc(docOf(S.cur)), () => !!S.binder],
+      ["文書を上へ", "", () => moveDoc(docOf(S.cur), docOf(S.cur) - 1), () => !!S.binder && docOf(S.cur) > 0],
+      ["文書を下へ", "", () => moveDoc(docOf(S.cur), docOf(S.cur) + 1), () => !!S.binder && docOf(S.cur) < S.binder.docs.length - 1],
+      null,
+      ["文書をバインダーから外す", "", () => deleteDoc(docOf(S.cur)), () => !!S.binder && S.binder.docs.length > 1],
     ]],
   ];
   const bar = $("#menubar");
   for (const [name, key, items] of menus) {
     const m = el("div", { class: "menu" });
+    if (name === "バインダー") { m.id = "menu-binder"; m.hidden = true; }
     const b = el("button", { html: `${name}<span class="k">(${key})</span>` });
     const drop = el("div", { class: "drop" });
     const open = () => {
@@ -898,6 +1262,8 @@ function buildToolbar() {
   bar.append(
     tool("select", "mouse-pointer-2", "選択", "Esc"),
     tool("text", "type", "テキスト", "T"),
+    tool("sticky", "sticky-note", "付箋", "S"),
+    tool("stamp", "stamp", "日付印", "D"),
     tool("highlight", "highlighter", "蛍光ペン", "H"),
     tool("rect", "square", "四角形", "R"),
     tool("ellipse", "circle", "楕円", "E"),
@@ -924,7 +1290,7 @@ function updateSwatches() {
 function updateChrome() {
   const dirty = !!(S.ed && S.ed.dirty());
   $("#topbar").classList.toggle("modified", dirty);
-  $("#docname").textContent = S.ed ? S.name + ".xdw" : "文書を開いてください";
+  $("#docname").textContent = S.ed ? S.name + S.ext : "文書を開いてください";
   document.title = (S.ed ? (dirty ? "● " : "") + S.name + " — " : "") + "XDW エディタ — EZPZ File";
   const u = $("#tb-undo"), r = $("#tb-redo");
   if (u) u.disabled = !(S.ed && S.ed.canUndo());
@@ -996,6 +1362,8 @@ function toast(msg, ms = 2600) {
 function bindChrome() {
   $("#fileinput").addEventListener("change", (e) => { const f = e.target.files[0]; if (f) openFile(f); e.target.value = ""; });
   $("#welcome-open").addEventListener("click", () => $("#fileinput").click());
+  $("#binder-add").innerHTML = ic("plus");
+  $("#binder-add").addEventListener("click", pickBinderAdd);
   $("#st-zin").innerHTML = ic("plus"); $("#st-zout").innerHTML = ic("minus"); $("#st-fit").innerHTML = ic("maximize");
   $("#st-zin").addEventListener("click", () => rezoom(S.zoom * 1.2));
   $("#st-zout").addEventListener("click", () => rezoom(S.zoom / 1.2));
@@ -1008,8 +1376,13 @@ function bindChrome() {
   window.addEventListener("dragover", (e) => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); });
   window.addEventListener("drop", (e) => {
     depth = 0; dz.classList.remove("show");
-    const f = e.dataTransfer.files && e.dataTransfer.files[0];
-    if (f) { e.preventDefault(); openFile(f); }
+    const fs = Array.from((e.dataTransfer.files) || []);
+    const f = fs[0];
+    if (!f) return;
+    e.preventDefault();
+    // pictures and PDFs dropped on an open document become new pages
+    if (S.ed && !/\.(xdw|xbd)$/i.test(f.name)) insertFiles(fs, S.cur + 1);
+    else openFile(f);
   });
   window.addEventListener("beforeunload", (e) => { if (S.ed && S.ed.dirty()) { e.preventDefault(); e.returnValue = ""; } });
   document.addEventListener("keydown", (e) => {
@@ -1030,7 +1403,7 @@ function bindChrome() {
       const step = e.shiftKey ? 1000 : 100;
       nudge(e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0, e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0);
     } else if (!mod && !e.altKey && S.ed) {
-      const t = { t: "text", h: "highlight", r: "rect", e: "ellipse", l: "line", v: "select" }[k];
+      const t = { t: "text", s: "sticky", d: "stamp", h: "highlight", r: "rect", e: "ellipse", l: "line", v: "select" }[k];
       if (t) setTool(t);
       else if (e.key === "PageDown") gotoPage(Math.min(S.info.length - 1, S.cur + 1));
       else if (e.key === "PageUp") gotoPage(Math.max(0, S.cur - 1));

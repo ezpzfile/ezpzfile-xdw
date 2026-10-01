@@ -17,3 +17,4 @@ pub mod doc;
 pub mod emfw;
 pub mod edit;
 pub mod pdf;
+pub mod pages;

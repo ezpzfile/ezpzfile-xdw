@@ -289,6 +289,98 @@ impl XdwDoc {
         Ok(())
     }
 
+    /// Add a picture annotation (RGBA pixels, `pw` × `ph`; shown opaque).
+    #[wasm_bindgen(js_name = addPicture)]
+    pub fn add_picture(&mut self, page: usize, x: f64, y: f64, w: f64, h: f64, rgba: &[u8], pw: u32, ph: u32) -> Result<usize, JsError> {
+        self.before();
+        let r = self.doc.add_picture(page, x, y, w, h, rgba, pw, ph).map_err(|e| self.fail(e))?;
+        self.after();
+        Ok(r)
+    }
+
+    /// Insert a blank page `w` × `h` (1/100 mm) at position `at`.
+    #[wasm_bindgen(js_name = insertBlankPage)]
+    pub fn insert_blank_page(&mut self, at: usize, w: f64, h: f64) -> Result<usize, JsError> {
+        self.before();
+        let r = self.doc.insert_blank_page(at, w, h).map_err(|e| self.fail(e))?;
+        self.after();
+        Ok(r)
+    }
+
+    /// Insert a page `w` × `h` showing a JPEG (`pxw` × `pxh` pixels), as
+    /// large as fits; `thumb` is a small RGBA picture of it (`tw` × `th`,
+    /// may be empty).
+    #[wasm_bindgen(js_name = insertImagePage)]
+    pub fn insert_image_page(&mut self, at: usize, w: f64, h: f64, jpeg: &[u8], pxw: u32, pxh: u32, thumb: &[u8], tw: u32, th: u32) -> Result<usize, JsError> {
+        self.before();
+        let j = ezxdw_core::pages::Jpeg { data: jpeg, w: pxw, h: pxh };
+        let t = ezxdw_core::pages::Thumb { rgba: thumb, w: tw, h: th };
+        let r = self.doc.insert_image_page(at, w, h, &j, None, (!thumb.is_empty()).then_some(&t)).map_err(|e| self.fail(e))?;
+        self.after();
+        Ok(r)
+    }
+
+    /// Copy pages of another DocuWorks file (`pages`: JSON list of page
+    /// numbers from 0, or empty for all) to position `at`.
+    #[wasm_bindgen(js_name = insertPagesFrom)]
+    pub fn insert_pages_from(&mut self, at: usize, bytes: Vec<u8>, pages: &str) -> Result<usize, JsError> {
+        let other = Document::open(bytes).map_err(err)?;
+        let which: Vec<usize> = if pages.trim().is_empty() { (0..other.pages.len()).collect() } else { serde_json::from_str(pages).map_err(err)? };
+        self.before();
+        let r = self.doc.insert_pages_from(at, &other, &which).map_err(|e| self.fail(e))?;
+        self.after();
+        Ok(r)
+    }
+
+    /// The binder's documents (JSON {name, docs: [{name, first_page,
+    /// pages}]}), or "null" for a plain document.
+    pub fn binder(&self) -> String {
+        match self.doc.binder_name() {
+            Some(name) => serde_json::json!({"name": name, "docs": self.doc.binder_docs()}).to_string(),
+            None => "null".into(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = renameBinderDoc)]
+    pub fn rename_binder_doc(&mut self, k: usize, name: &str) -> Result<(), JsError> {
+        self.before();
+        self.doc.rename_binder_doc(k, name).map_err(|e| self.fail(e))?;
+        self.after();
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name = deleteBinderDoc)]
+    pub fn delete_binder_doc(&mut self, k: usize) -> Result<(), JsError> {
+        self.before();
+        self.doc.delete_binder_doc(k).map_err(|e| self.fail(e))?;
+        self.after();
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name = moveBinderDoc)]
+    pub fn move_binder_doc(&mut self, from: usize, to: usize) -> Result<(), JsError> {
+        self.before();
+        self.doc.move_binder_doc(from, to).map_err(|e| self.fail(e))?;
+        self.after();
+        Ok(())
+    }
+
+    /// Add another file's documents to this binder at position `at`.
+    #[wasm_bindgen(js_name = addBinderDocs)]
+    pub fn add_binder_docs(&mut self, at: usize, bytes: Vec<u8>, name: &str) -> Result<usize, JsError> {
+        let other = Document::open(bytes).map_err(err)?;
+        self.before();
+        let r = self.doc.add_binder_docs(at, &other, name).map_err(|e| self.fail(e))?;
+        self.after();
+        Ok(r)
+    }
+
+    /// Today's date as a date stamp shows it ('26.10.01).
+    #[wasm_bindgen(js_name = stampDate)]
+    pub fn stamp_date(year: i32, month: u32, day: u32) -> String {
+        ezxdw_core::edit::stamp_date(year, month, day)
+    }
+
     pub fn undo(&mut self) -> bool {
         match self.undo.pop() {
             Some(r) => {

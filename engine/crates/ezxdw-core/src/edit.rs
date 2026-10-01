@@ -58,11 +58,29 @@ pub enum Shape {
         #[serde(default = "one")]
         width: f64,
     },
+    /// A date stamp (日付印): a circle split in three by two lines, with
+    /// `top` above, `date` in the middle and `bottom` below.
+    Stamp {
+        #[serde(default)]
+        top: String,
+        date: String,
+        #[serde(default)]
+        bottom: String,
+        #[serde(default = "stamp_red")]
+        color: u32,
+    },
 }
 
 fn one() -> f64 {
     1.0
 }
+
+fn stamp_red() -> u32 {
+    0xe60012
+}
+
+/// Default size of a date stamp (1/100 mm): 18 mm across.
+pub const STAMP_SIZE: f64 = 1800.0;
 
 /// Text font: what DocuWorks text annotations use by default.
 pub const FACE: &str = "ＭＳ ゴシック";
@@ -103,8 +121,12 @@ pub fn draw(shape: &Shape, w: f64, h: f64) -> Vec<u8> {
     match shape {
         Shape::Text { text, size, color, bold, background, frame } => {
             if background.is_some() || frame.is_some() {
-                e.pen_brush(frame.map(|c| (c, emfw::units(25.0).max(1))), *background);
-                e.rectangle(0, 0, uw, uh);
+                let fw = emfw::units(25.0).max(1);
+                e.pen_brush(frame.map(|c| (c, fw)), *background);
+                // the frame inside the box (GDI leaves out the right and
+                // bottom edge, and the box clips)
+                let i = if frame.is_some() { (fw + 1) / 2 } else { 0 };
+                e.rectangle(i, i, uw - i + 1, uh - i + 1);
             }
             let em_u = (size * 300.0 / 72.0).round() as i32;
             e.font(em_u, if *bold { 700 } else { 400 }, false, FACE);
@@ -146,8 +168,66 @@ pub fn draw(shape: &Shape, w: f64, h: f64) -> Vec<u8> {
             let pts: Vec<(i32, i32)> = points.iter().map(|&(x, y)| (emfw::units(x), emfw::units(y))).collect();
             e.polyline(&pts);
         }
+        Shape::Stamp { top, date, bottom, color } => draw_stamp(&mut e, uw, uh, top, date, bottom, *color),
     }
     e.finish(w, h)
+}
+
+/// The date stamp picture: an oval filling the box, two lines across it,
+/// and three centred texts sized to fit their part of the oval.
+fn draw_stamp(e: &mut Emf, uw: i32, uh: i32, top: &str, date: &str, bottom: &str, color: u32) {
+    let (w, h) = (uw as f64, uh as f64);
+    let pen = (w.min(h) * 0.035).max(2.0);
+    let (cx, cy) = (w / 2.0, h / 2.0);
+    let (rx, ry) = (w / 2.0 - pen / 2.0, h / 2.0 - pen / 2.0);
+    // half the width of the oval at height dy from the centre
+    let chord = |dy: f64| rx * (1.0 - (dy / ry).powi(2)).max(0.0).sqrt();
+    e.pen_brush(Some((color, pen.round() as i32)), None);
+    let p = pen / 2.0;
+    e.ellipse(p.round() as i32, p.round() as i32, (w - p).round() as i32, (h - p).round() as i32);
+    let d = ry * 0.34; // the lines, above and below the centre
+    for y in [cy - d, cy + d] {
+        let c = chord(d) - pen * 0.3;
+        e.polyline(&[((cx - c).round() as i32, y.round() as i32), ((cx + c).round() as i32, y.round() as i32)]);
+    }
+    e.text_color(color);
+    // (text, centre y, tallest em, the y where the width is narrowest)
+    let band = ry - d;
+    let parts = [
+        (top, cy - d - band * 0.45, band * 0.56, d + band * 0.70),
+        (date, cy, 2.0 * d * 0.66, d * 0.66),
+        (bottom, cy + d + band * 0.45, band * 0.56, d + band * 0.70),
+    ];
+    for (text, yc, em_max, dy_narrow) in parts {
+        let text = text.trim();
+        if text.is_empty() {
+            continue;
+        }
+        let ems: f64 = text.chars().map(advance).sum::<f64>().max(0.5);
+        let room = 2.0 * chord(dy_narrow) * 0.92;
+        let em = em_max.min(room / ems).max(4.0);
+        let em_u = em.round() as i32;
+        e.font(em_u, 400, false, FACE);
+        let adv: Vec<i32> = text.chars().map(|c| (advance(c) * em).round() as i32).collect();
+        let tw: i32 = adv.iter().sum();
+        e.text((cx - tw as f64 / 2.0).round() as i32, (yc - em / 2.0).round() as i32, text, &adv);
+    }
+}
+
+/// Today's date the way DocuWorks date stamps show it: `'26.10.01`.
+pub fn stamp_date(year: i32, month: u32, day: u32) -> String {
+    format!("'{:02}.{:02}.{:02}", year.rem_euclid(100), month, day)
+}
+
+/// Year, month and day in a stamp date written like `'26.10.01`,
+/// `2026.10.01`, `2026/10/1` or `2026-10-01`.
+fn stamp_ymd(date: &str) -> Option<(String, String, String)> {
+    let t = date.trim().trim_start_matches(['\'', '’']);
+    let parts: Vec<&str> = t.split(['.', '/', '-']).map(|x| x.trim()).collect();
+    if parts.len() != 3 || parts.iter().any(|p| p.is_empty() || !p.chars().all(|c| c.is_ascii_digit())) {
+        return None;
+    }
+    Some((parts[0].to_string(), parts[1].to_string(), parts[2].to_string()))
 }
 
 /// Attribute 7 holding a drawing: the body fields DocuWorks writes for
@@ -166,11 +246,11 @@ pub fn drawing_attr(emf: &[u8], w: f64, h: f64) -> Attr {
     Attr { class: 0x80, tag: 7, value: v }
 }
 
-fn int_attr(tag: u32, vs: &[i64]) -> Attr {
+pub(crate) fn int_attr(tag: u32, vs: &[i64]) -> Attr {
     Attr { class: 0x80, tag, value: props::ints_value(vs) }
 }
 
-fn defs_attr(defs: &[(u32, i64, &str)]) -> Attr {
+pub(crate) fn defs_attr(defs: &[(u32, i64, &str)]) -> Attr {
     let mut v = Vec::new();
     for &(tag, ty, name) in defs {
         let mut nm = name.as_bytes().to_vec();
@@ -182,17 +262,17 @@ fn defs_attr(defs: &[(u32, i64, &str)]) -> Attr {
     Attr { class: 0x80, tag: props::A_DEFS, value: v }
 }
 
-fn named(tag: u32, value: Vec<u8>) -> Attr {
+pub(crate) fn named(tag: u32, value: Vec<u8>) -> Attr {
     Attr { class: 0x80, tag, value }
 }
 
-fn utf16z(s: &str) -> Vec<u8> {
+pub(crate) fn utf16z(s: &str) -> Vec<u8> {
     let mut v: Vec<u8> = s.encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
     v.extend([0, 0]);
     v
 }
 
-fn sjisz(s: &str) -> Vec<u8> {
+pub(crate) fn sjisz(s: &str) -> Vec<u8> {
     let mut v = crate::sjis::encode(s);
     v.push(0);
     v
@@ -234,6 +314,7 @@ fn object_record(depth: u8, id: i64, shape: &Shape, w: f64, h: f64) -> Record {
                 (2027, 2, "%CCP_#name"),
                 (2028, 4, "%Text(w"),
                 (2029, 4, "%Text"),
+                (2030, 2, "%FrameColor"),
             ]));
             attrs.push(named(2002, sjisz(FACE)));
             attrs.push(int_attr(2003, &[17]));
@@ -254,13 +335,14 @@ fn object_record(depth: u8, id: i64, shape: &Shape, w: f64, h: f64) -> Record {
                 attrs.push(int_attr(t, &[MARGIN as i64]));
             }
             attrs.push(int_attr(2022, &[0]));
-            attrs.push(int_attr(2023, &[if background.is_some() { 0 } else { 1 }]));
+            attrs.push(int_attr(2023, &[0]));
             attrs.push(int_attr(2024, &[if frame.is_some() { 1 } else { 0 }]));
             attrs.push(named(2025, utf16z(FACE_W)));
             attrs.push(int_attr(2026, &[932]));
             attrs.push(int_attr(2027, &[932]));
             attrs.push(named(2028, utf16z(text)));
             attrs.push(named(2029, sjisz(text)));
+            attrs.push(int_attr(2030, &[emfw::colorref(frame.unwrap_or(0)) as i64]));
             attrs.push(int_attr(68, &[0]));
         }
         Shape::Rect { stroke, width, fill, highlight } => {
@@ -323,11 +405,48 @@ fn object_record(depth: u8, id: i64, shape: &Shape, w: f64, h: f64) -> Record {
             }
             attrs.push(named(2010, d));
         }
+        Shape::Stamp { top, date, bottom, color } => {
+            // The names follow DocuWorks' published API names for date
+            // stamps; the viewer draws the stamp from the stored picture.
+            kind = doc::K_STAMP;
+            let (y, m, dd) = stamp_ymd(date).unwrap_or_default();
+            attrs.push(defs_attr(&[
+                (2001, 4, "%TopField"),
+                (2002, 4, "%BottomField"),
+                (2003, 2, "%DateStyle"),
+                (2004, 4, "%YearField"),
+                (2005, 4, "%MonthField"),
+                (2006, 4, "%DayField"),
+                (2007, 2, "%DateOrder"),
+                (2008, 2, "%BorderColor"),
+                (2009, 4, "%Text(w"),
+            ]));
+            attrs.push(named(2001, sjisz(top)));
+            attrs.push(named(2002, sjisz(bottom)));
+            attrs.push(int_attr(2003, &[1])); // manual date
+            attrs.push(named(2004, sjisz(&y)));
+            attrs.push(named(2005, sjisz(&m)));
+            attrs.push(named(2006, sjisz(&dd)));
+            attrs.push(int_attr(2007, &[0])); // year, month, day
+            attrs.push(int_attr(2008, &[emfw::colorref(*color) as i64]));
+            // the three lines as shown, so this editor can read them back
+            attrs.push(named(2009, utf16z(&format!("{top}\n{date}\n{bottom}"))));
+        }
     }
     attrs.push(int_attr(3, &[id]));
     attrs.push(int_attr(5, &size));
     attrs.push(drawing_attr(&draw(shape, w, h), w, h));
     Record { depth, kind: props::num_bytes(kind), attrs }
+}
+
+/// The box an annotation gets: text follows its text when w or h is 0,
+/// a date stamp gets its default size.
+fn box_size(shape: &Shape, w: f64, h: f64) -> (f64, f64) {
+    match shape {
+        Shape::Text { text, size, .. } if w <= 0.0 || h <= 0.0 => text_box(text, *size),
+        Shape::Stamp { .. } if w <= 0.0 || h <= 0.0 => (STAMP_SIZE, STAMP_SIZE),
+        _ => (w.max(100.0), h.max(100.0)),
+    }
 }
 
 /// RECTATT_DRAW / ARCATT_DRAW: 0 frame, 1 fill, 2 both (DocuWorks files
@@ -340,7 +459,7 @@ fn draw_mode(frame: bool, fill: bool) -> i64 {
     }
 }
 
-fn place_record(depth: u8, x: f64, y: f64, w: f64, h: f64) -> Record {
+pub(crate) fn place_record(depth: u8, x: f64, y: f64, w: f64, h: f64) -> Record {
     Record {
         depth,
         kind: props::num_bytes(K_PLACE),
@@ -353,7 +472,7 @@ fn place_record(depth: u8, x: f64, y: f64, w: f64, h: f64) -> Record {
 }
 
 /// Where a record's subtree ends (exclusive).
-fn subtree_end(r: &[Record], i: usize) -> usize {
+pub(crate) fn subtree_end(r: &[Record], i: usize) -> usize {
     let d = r[i].depth;
     let mut j = i + 1;
     while j < r.len() && r[j].depth > d {
@@ -363,18 +482,24 @@ fn subtree_end(r: &[Record], i: usize) -> usize {
 }
 
 impl Document {
-    fn page(&self, n: usize) -> Result<&doc::Page> {
+    pub(crate) fn page(&self, n: usize) -> Result<&doc::Page> {
         self.pages.get(n).ok_or_else(|| Error::Unsupported(format!("no page {}", n + 1)))
     }
 
     /// The next free object number on a page (and remember it in lastmid).
     fn next_id(&mut self, page: usize) -> Result<i64> {
         let pr = self.page(page)?.record;
+        Ok(self.bump_lastmid(pr, 2))
+    }
+
+    /// The next free number among the records `below` levels under
+    /// `pr` (attribute 3), remembered in `pr`'s "lastmid".
+    pub(crate) fn bump_lastmid(&mut self, pr: usize, below: u8) -> i64 {
         let tag = self.records[pr].named_tag("lastmid");
         let mut max = tag.and_then(|t| self.records[pr].int(t)).unwrap_or(0);
         let end = subtree_end(&self.records, pr);
         for r in &self.records[pr + 1..end] {
-            if r.depth == self.records[pr].depth + 2 {
+            if r.depth == self.records[pr].depth + below {
                 max = max.max(r.int(3).unwrap_or(0));
             }
         }
@@ -396,16 +521,13 @@ impl Document {
                 rec.set(0x80, t, props::ints_value(&[id]));
             }
         }
-        Ok(id)
+        id
     }
 
     /// Add an annotation at (x, y), size w × h (1/100 mm). A text
     /// annotation's size follows its text when w or h is 0.
     pub fn add_annotation(&mut self, page: usize, x: f64, y: f64, w: f64, h: f64, shape: &Shape) -> Result<usize> {
-        let (w, h) = match shape {
-            Shape::Text { text, size, .. } if w <= 0.0 || h <= 0.0 => text_box(text, *size),
-            _ => (w.max(100.0), h.max(100.0)),
-        };
+        let (w, h) = box_size(shape, w, h);
         let id = self.next_id(page)?;
         let pr = self.page(page)?.record;
         let d = self.records[pr].depth;
@@ -452,10 +574,7 @@ impl Document {
         if o.kind == K_CONTENT {
             return Err(Error::Unsupported("the page content cannot be changed".into()));
         }
-        let (w, h) = match shape {
-            Shape::Text { text, size, .. } if w <= 0.0 || h <= 0.0 => text_box(text, *size),
-            _ => (w.max(100.0), h.max(100.0)),
-        };
+        let (w, h) = box_size(shape, w, h);
         let id = self.records[o.record].int(3).unwrap_or(1);
         let d = self.records[o.record].depth;
         let end = subtree_end(&self.records, o.place);
@@ -541,6 +660,9 @@ impl Document {
             return Err(Error::Unsupported("a document needs at least one page".into()));
         }
         let pr = self.page(page)?.record;
+        if self.pages_in_list(pr) <= 1 {
+            return Err(Error::Unsupported("the last page of a binder document (remove the document instead)".into()));
+        }
         let end = subtree_end(&self.records, pr);
         self.records.drain(pr..end);
         self.refresh();
@@ -557,20 +679,48 @@ impl Document {
         if self.records[a].depth != self.records[self.page(to)?.record].depth {
             return Err(Error::Unsupported("pages of different documents in a binder".into()));
         }
+        let from_list = self.list_of(a);
+        let to_list = self.list_of(self.page(to)?.record);
+        if from_list != to_list && self.pages_in_list(a) <= 1 {
+            return Err(Error::Unsupported("the last page of a binder document cannot leave it".into()));
+        }
         let end = subtree_end(&self.records, a);
         let block: Vec<Record> = self.records.drain(a..end).collect();
         self.pages = self.find_pages();
+        // after the target when moving down, before it when moving up
         let at = if to >= self.pages.len() {
             let last = self.pages.last().map(|p| p.record).unwrap_or(0);
             subtree_end(&self.records, last)
+        } else if to > from {
+            // pages shifted by one: the target is now at to - 1
+            subtree_end(&self.records, self.pages[to - 1].record)
         } else {
             self.pages[to].record
         };
         for (k, r) in block.into_iter().enumerate() {
             self.records.insert(at + k, r);
         }
+        if from_list != to_list {
+            // a page joining another document of a binder gets a number there
+            if let Some(l) = self.list_of(at) {
+                let id = self.bump_lastmid(l, 1);
+                self.records[at].set(0x80, 3, props::ints_value(&[id]));
+            }
+        }
         self.refresh();
         Ok(())
+    }
+
+    /// The page list (1303) a page record belongs to.
+    pub(crate) fn list_of(&self, pr: usize) -> Option<usize> {
+        let d = self.records.get(pr)?.depth;
+        (0..pr).rev().find(|&j| self.records[j].depth < d).filter(|&j| self.records[j].kind_num() == doc::K_DOCUMENT)
+    }
+
+    /// How many pages the page list of page record `pr` holds.
+    fn pages_in_list(&self, pr: usize) -> usize {
+        let l = self.list_of(pr);
+        self.pages.iter().filter(|p| self.list_of(p.record) == l).count()
     }
 
     /// The records and new entries a save writes: entries added since
@@ -647,7 +797,7 @@ impl Document {
                 let color = rgb(ni("%Color").unwrap_or(0));
                 let bold = ni("%Style").unwrap_or(0) & 1 != 0;
                 let bg = ni("%ATTR_BKGND_COLOR").filter(|&c| c != 65793 && ni("%BkGndPermeable").unwrap_or(1) == 0).map(rgb);
-                let frame = (ni("%FrameOnOff").unwrap_or(0) != 0).then_some(0);
+                let frame = (ni("%FrameOnOff").unwrap_or(0) != 0).then(|| rgb(ni("%FrameColor").unwrap_or(0)));
                 Some(Shape::Text { text, size, color, bold, background: bg, frame })
             }
             K_RECT | K_ELLIPSE => {
@@ -674,13 +824,21 @@ impl Document {
                 let _ = r;
                 Some(Shape::Line { points, color, width })
             }
+            doc::K_STAMP => {
+                // only stamps made here keep their lines in %Text(w
+                let t = utf16_str(&self.named(o.record, "%Text(w")?.value);
+                let mut it = t.splitn(3, '\n');
+                let (top, date, bottom) = (it.next()?.to_string(), it.next()?.to_string(), it.next()?.to_string());
+                let color = rgb(ni("%BorderColor").unwrap_or(0x1200e6));
+                Some(Shape::Stamp { top, date, bottom, color })
+            }
             _ => None,
         }
     }
 
     /// Is `obj` one of the annotation kinds this editor can redraw?
     pub fn editable(&self, page: usize, obj: usize) -> bool {
-        self.object(page, obj).map(|o| matches!(o.kind, K_TEXT | K_RECT | K_ELLIPSE | K_LINE)).unwrap_or(false)
+        self.shape_of(page, obj).is_some()
     }
 }
 
@@ -712,6 +870,11 @@ pub fn dib_24(rgba: &[u8], w: u32, h: u32) -> Vec<u8> {
         }
     }
     out
+}
+
+fn utf16_str(b: &[u8]) -> String {
+    let u: Vec<u16> = b.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).take_while(|&x| x != 0).collect();
+    String::from_utf16_lossy(&u)
 }
 
 /// Text annotation size for a box in page units (for the UI).
