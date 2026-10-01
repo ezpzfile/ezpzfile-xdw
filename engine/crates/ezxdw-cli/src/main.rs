@@ -238,6 +238,37 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                 writeln!(out, "--- page {}\n{t}", k + 1)?;
             }
         }
+        "add-named" => {
+            // add a named number attribute (with its definition) to a record
+            let mut recs = props::parse(&c.properties(&b)?)?;
+            let ri: usize = a.get(3).ok_or("record")?.parse()?;
+            let name = a.get(4).ok_or("name")?;
+            let v: i64 = a.get(5).ok_or("value")?.parse()?;
+            let r = recs.get_mut(ri).ok_or("no such record")?;
+            let mut defs = r.defs();
+            let tag = defs.iter().map(|d| d.tag).max().unwrap_or(2000).max(2000) + 1;
+            defs.push(props::AttrDef { tag, ty: 2, index: -1, name: name.clone() });
+            let mut dv = Vec::new();
+            for d in &defs {
+                let mut nm = d.name.as_bytes().to_vec();
+                nm.push(0);
+                dv.extend(props::ints_value(&[d.tag as i64, d.ty, d.index, nm.len() as i64]));
+                dv.push(nm.len() as u8);
+                dv.extend(nm);
+            }
+            r.set(0x80, props::A_DEFS, dv);
+            r.set(0x80, tag, props::ints_value(&[v]));
+            let (o, _) = ezxdw_core::write::append(&b, &c, &[], &recs)?;
+            std::fs::write(a.get(6).ok_or("missing out")?, o)?;
+        }
+        "set-kind" => {
+            let mut recs = props::parse(&c.properties(&b)?)?;
+            let ri: usize = a.get(3).ok_or("record")?.parse()?;
+            let k = i64::from_str_radix(a.get(4).ok_or("kind (hex)")?.trim_start_matches("0x"), 16)?;
+            recs.get_mut(ri).ok_or("no such record")?.kind = props::num_bytes(k);
+            let (o, _) = ezxdw_core::write::append(&b, &c, &[], &recs)?;
+            std::fs::write(a.get(5).ok_or("missing out")?, o)?;
+        }
         "set-attr" => {
             let mut recs = props::parse(&c.properties(&b)?)?;
             let ri: usize = a.get(3).ok_or("record")?.parse()?;
@@ -278,6 +309,24 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                         d.change_annotation(page, g("obj") as usize, g("x"), g("y"), g("w"), g("h"), &shape)?;
                     }
                     "rotate" => d.rotate_page(page, g("q") as i32)?,
+                    "picture" => {
+                        // a test picture: a red ring on white, pw × ph pixels
+                        let (pw, ph) = (g("pw") as u32, g("ph") as u32);
+                        let mut px = vec![255u8; (pw * ph * 4) as usize];
+                        for yy in 0..ph {
+                            for xx in 0..pw {
+                                let (dx, dy) = (xx as f64 - pw as f64 / 2.0, yy as f64 - ph as f64 / 2.0);
+                                let r = (dx * dx + dy * dy).sqrt();
+                                if (r - pw as f64 * 0.42).abs() < pw as f64 * 0.04 || (dy.abs() < ph as f64 * 0.02 && r < pw as f64 * 0.42) {
+                                    let k = ((yy * pw + xx) * 4) as usize;
+                                    px[k] = 220;
+                                    px[k + 1] = 30;
+                                    px[k + 2] = 30;
+                                }
+                            }
+                        }
+                        d.add_picture(page, g("x"), g("y"), g("w"), g("h"), &px, pw, ph)?;
+                    }
                     "delete_page" => d.delete_page(page)?,
                     "move_page" => d.move_page(g("from") as usize, g("to") as usize)?,
                     "delete" => d.delete_object(page, g("obj") as usize)?,

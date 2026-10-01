@@ -206,6 +206,40 @@ fn rle(inf: &Info, b: &[u8], mut set: impl FnMut(usize, usize, usize)) {
     }
 }
 
+/// Size of a BITMAPINFO (header, masks and colours): where the bits start.
+pub fn info_len(d: &[u8]) -> Option<usize> {
+    let inf = info(d)?;
+    let size = u32le(d, 0) as usize;
+    Some(size + inf.palette.len() * 4 + if inf.masks.is_some() && size == 40 { 12 } else { 0 })
+}
+
+/// A DIB as DocuWorks stores it in pictures and thumbnails (entry kind 7):
+/// BITMAPINFO, then either the bits, or a block `1, stored size, size,
+/// rows` (u32 each) followed by the bits compressed with LHA -lh5-.
+pub fn decode_stored(d: &[u8]) -> Option<Image> {
+    let at = info_len(d)?;
+    let rest = d.get(at..)?;
+    if rest.len() >= 16 && u32le(rest, 0) == 1 {
+        let (stored, size) = (u32le(rest, 4) as usize, u32le(rest, 8) as usize);
+        if 16 + stored <= rest.len() && size > 0 {
+            let bits = crate::lzh::decompress(&rest[16..16 + stored], size).ok()?;
+            return decode(&d[..at], &bits);
+        }
+    }
+    decode(&d[..at], rest)
+}
+
+/// The DocuWorks form of a DIB: `bmi` + compressed bits block.
+pub fn encode_stored(bmi: &[u8], bits: &[u8], rows: u32) -> Vec<u8> {
+    let packed = crate::lzh::compress(bits);
+    let mut out = bmi.to_vec();
+    for v in [1u32, packed.len() as u32, bits.len() as u32, rows] {
+        out.extend_from_slice(&v.to_le_bytes());
+    }
+    out.extend_from_slice(&packed);
+    out
+}
+
 /// Crop `img` to the source rectangle given in DIB terms (y measured from
 /// the bottom for bottom-up pictures is already handled by the caller).
 pub fn crop(img: &Image, x: u32, y: u32, w: u32, h: u32) -> Option<Image> {

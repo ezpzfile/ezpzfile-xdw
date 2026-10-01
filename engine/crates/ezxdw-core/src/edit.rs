@@ -363,25 +363,6 @@ fn subtree_end(r: &[Record], i: usize) -> usize {
 }
 
 impl Document {
-    /// Re-read pages and definitions after the records changed.
-    pub fn refresh(&mut self) {
-        self.ext_defs.clear();
-        for (i, r) in self.records.iter().enumerate() {
-            if let Some(a) = r.get(props::A_DEFS) {
-                if a.class & 0xc0 == 0xc0 {
-                    if let Some((n, _)) = write::read_ref(&a.value) {
-                        if let Some(e) = self.entries.get(n as usize) {
-                            if let Some(v) = doc::expanded_body(&self.bytes, e) {
-                                self.ext_defs.insert(i, props::parse_defs(&v));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        self.pages = self.find_pages();
-    }
-
     fn page(&self, n: usize) -> Result<&doc::Page> {
         self.pages.get(n).ok_or_else(|| Error::Unsupported(format!("no page {}", n + 1)))
     }
@@ -485,6 +466,43 @@ impl Document {
         Ok(())
     }
 
+    /// Add a picture annotation (DocuWorks "bitmap" annotation, kind
+    /// 0x803f): `rgba` is `pw` × `ph` pixels, top row first; it is placed
+    /// at (x, y) with size w × h (1/100 mm). Transparent pixels become white.
+    pub fn add_picture(&mut self, page: usize, x: f64, y: f64, w: f64, h: f64, rgba: &[u8], pw: u32, ph: u32) -> Result<usize> {
+        if pw == 0 || ph == 0 || rgba.len() < (pw * ph * 4) as usize {
+            return Err(Error::Unsupported("picture size does not match its pixels".into()));
+        }
+        let raw = dib_24(rgba, pw, ph);
+        let dib = crate::dib::encode_stored(&raw[..40], &raw[40..], ph);
+        let mut body = element(0x80, &[7]);
+        body.extend(element(0x81, &[40]));
+        body.extend(element(0x84, &tlv::uint_bytes(w.round() as u64)));
+        body.extend(element(0x85, &tlv::uint_bytes(h.round() as u64)));
+        body.extend(element(0x89, &tlv::uint_bytes(dib.len() as u64)));
+        body.extend(element(0x86, &dib));
+        let id = self.next_id(page)?;
+        let (_, reference) = self.add_entry(body, false);
+        let pr = self.page(page)?.record;
+        let d = self.records[pr].depth;
+        let at = subtree_end(&self.records, pr);
+        let obj = Record {
+            depth: d + 2,
+            kind: props::num_bytes(doc::K_PICTURE),
+            attrs: vec![
+                int_attr(57, &[1]),
+                int_attr(5, &[w.round() as i64, h.round() as i64]),
+                int_attr(61, &[0]),
+                Attr { class: 0xc0, tag: 7, value: reference },
+                int_attr(3, &[id]),
+            ],
+        };
+        self.records.insert(at, place_record(d + 1, x, y, w, h));
+        self.records.insert(at + 1, obj);
+        self.refresh();
+        Ok(self.page(page)?.objects.len() - 1)
+    }
+
     /// Turn a page clockwise by `quarters` × 90°.
     pub fn rotate_page(&mut self, page: usize, quarters: i32) -> Result<()> {
         let q = quarters.rem_euclid(4);
@@ -555,16 +573,63 @@ impl Document {
         Ok(())
     }
 
+    /// The records and new entries a save writes: entries added since
+    /// opening that nothing refers to any more are left out, and the rest
+    /// are numbered after the file's own.
+    pub fn to_write(&self) -> (Vec<Record>, Vec<write::NewEntry>) {
+        let base = self.entries.len() as u32;
+        let mut used = vec![false; self.pending.len()];
+        for r in &self.records {
+            for a in &r.attrs {
+                if a.class & 0xc0 == 0xc0 {
+                    if let Some((i, _)) = write::read_ref(&a.value) {
+                        if i >= base && ((i - base) as usize) < used.len() {
+                            used[(i - base) as usize] = true;
+                        }
+                    }
+                }
+            }
+        }
+        let mut map = std::collections::HashMap::new();
+        let mut kept = Vec::new();
+        for (k, e) in self.pending.iter().enumerate() {
+            if used[k] {
+                map.insert(base + k as u32, base + kept.len() as u32);
+                kept.push(e.clone());
+            }
+        }
+        let mut records = self.records.clone();
+        for r in &mut records {
+            for a in &mut r.attrs {
+                if a.class & 0xc0 == 0xc0 {
+                    if let Some((i, len)) = write::read_ref(&a.value) {
+                        if let Some(&n) = map.get(&i) {
+                            a.value = write::entry_ref(n, len);
+                        }
+                    }
+                }
+            }
+        }
+        (records, kept)
+    }
+
     /// The document as a `.xdw` file (original bytes + one new segment).
     /// The result is read back and checked before it is returned.
     pub fn save(&self) -> Result<Vec<u8>> {
-        let (bytes, _) = write::append(&self.bytes, &self.container, &[], &self.records)?;
+        let (records, entries) = self.to_write();
+        let (bytes, _) = write::append(&self.bytes, &self.container, &entries, &records)?;
         let back = Document::open(bytes.clone())?;
-        if back.records != self.records {
+        if back.records != records {
             return Err(Error::Corrupt("the saved file does not read back the same".into()));
         }
         if back.pages.len() != self.pages.len() {
             return Err(Error::Corrupt("page count changed while saving".into()));
+        }
+        for (k, e) in entries.iter().enumerate() {
+            let n = self.entries.len() + k;
+            if back.entry_body(n) != Some(&e.body[..]) {
+                return Err(Error::Corrupt("a new entry does not read back the same".into()));
+            }
         }
         Ok(bytes)
     }
@@ -617,6 +682,36 @@ impl Document {
     pub fn editable(&self, page: usize, obj: usize) -> bool {
         self.object(page, obj).map(|o| matches!(o.kind, K_TEXT | K_RECT | K_ELLIPSE | K_LINE)).unwrap_or(false)
     }
+}
+
+/// A 24-bit bottom-up DIB (BITMAPINFOHEADER + rows) from RGBA pixels
+/// (transparent pixels become white).
+pub fn dib_24(rgba: &[u8], w: u32, h: u32) -> Vec<u8> {
+    let stride = ((w * 3 + 3) / 4 * 4) as usize;
+    let mut out = Vec::with_capacity(40 + stride * h as usize);
+    for v in [40u32, w, h] {
+        out.extend_from_slice(&v.to_le_bytes());
+    }
+    out.extend_from_slice(&1u16.to_le_bytes());
+    out.extend_from_slice(&24u16.to_le_bytes());
+    out.extend_from_slice(&0u32.to_le_bytes()); // BI_RGB
+    out.extend_from_slice(&((stride * h as usize) as u32).to_le_bytes());
+    for v in [11811u32, 11811, 0, 0] {
+        out.extend_from_slice(&v.to_le_bytes()); // 300 dpi, no palette
+    }
+    for row in (0..h as usize).rev() {
+        let start = out.len();
+        for x in 0..w as usize {
+            let p = &rgba[(row * w as usize + x) * 4..][..4];
+            let a = p[3] as u32;
+            let mix = |c: u8| ((c as u32 * a + 255 * (255 - a)) / 255) as u8;
+            out.extend_from_slice(&[mix(p[2]), mix(p[1]), mix(p[0])]);
+        }
+        while out.len() - start < stride {
+            out.push(0);
+        }
+    }
+    out
 }
 
 /// Text annotation size for a box in page units (for the UI).

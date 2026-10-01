@@ -94,6 +94,38 @@ pub struct Document {
     pub pages: Vec<Page>,
     /// Attribute definitions kept in entries, by record index.
     pub ext_defs: std::collections::HashMap<usize, Vec<props::AttrDef>>,
+    /// Entries added since opening (numbered after the file's own); they
+    /// are written by the next save, if still referenced.
+    pub pending: Vec<write::NewEntry>,
+}
+
+/// An entry's body: field list (starts with 0x80) or raw data.
+#[derive(Debug, Clone, Copy)]
+pub enum BodyRef<'a> {
+    Fields(&'a [u8]),
+    Raw(&'a [u8]),
+}
+
+impl<'a> BodyRef<'a> {
+    fn of(b: &'a [u8]) -> BodyRef<'a> {
+        if b.first() == Some(&0x80) && tlv::list(b, 0, b.len()).is_ok() {
+            BodyRef::Fields(b)
+        } else {
+            BodyRef::Raw(b)
+        }
+    }
+    pub fn bytes(&self) -> &'a [u8] {
+        match self {
+            BodyRef::Fields(b) | BodyRef::Raw(b) => b,
+        }
+    }
+    /// The data as used: expanded drawing data, or the raw bytes.
+    pub fn data(&self) -> Option<Vec<u8>> {
+        match self {
+            BodyRef::Fields(b) => Content::of_fields(b).map(|c| c.data),
+            BodyRef::Raw(b) => Some(b.to_vec()),
+        }
+    }
 }
 
 /// Where an object's drawing is.
@@ -110,22 +142,45 @@ impl Document {
         let container = Container::parse(&bytes)?;
         let records = props::parse(&container.properties(&bytes)?)?;
         let entries = container.entries(&bytes)?;
-        let mut d = Document { bytes, container, records, entries, pages: Vec::new(), ext_defs: Default::default() };
-        for (i, r) in d.records.iter().enumerate() {
-            if let Some(a) = r.get(props::A_DEFS) {
-                if a.class & 0xc0 == 0xc0 {
-                    if let Some((n, _)) = write::read_ref(&a.value) {
-                        if let Some(e) = d.entries.get(n as usize) {
-                            if let Some(v) = expanded_body(&d.bytes, e) {
-                                d.ext_defs.insert(i, props::parse_defs(&v));
-                            }
-                        }
-                    }
-                }
+        let mut d = Document { bytes, container, records, entries, pages: Vec::new(), ext_defs: Default::default(), pending: Vec::new() };
+        d.refresh();
+        Ok(d)
+    }
+
+    /// Body of entry `n` (the file's own or one added since opening).
+    pub fn body(&self, n: usize) -> Option<BodyRef<'_>> {
+        if let Some(e) = self.entries.get(n) {
+            let b = &self.bytes[e.body_range.0..e.body_range.0 + e.body_range.1];
+            return Some(match e.body {
+                Body::Fields { .. } => BodyRef::Fields(b),
+                Body::Raw(..) => BodyRef::Raw(b),
+            });
+        }
+        self.pending.get(n - self.entries.len()).map(|e| BodyRef::of(&e.body))
+    }
+
+    /// Add an entry; returns its number and the reference value to store.
+    pub fn add_entry(&mut self, body: Vec<u8>, picture: bool) -> (u32, Vec<u8>) {
+        let n = (self.entries.len() + self.pending.len()) as u32;
+        let r = write::entry_ref(n, body.len());
+        self.pending.push(write::NewEntry { body, picture });
+        (n, r)
+    }
+
+    /// Re-read pages and definitions after the records changed.
+    pub fn refresh(&mut self) {
+        self.ext_defs.clear();
+        for i in 0..self.records.len() {
+            let Some(a) = self.records[i].get(props::A_DEFS) else { continue };
+            if a.class & 0xc0 != 0xc0 {
+                continue;
+            }
+            let Some((n, _)) = write::read_ref(&a.value) else { continue };
+            if let Some(v) = self.body(n as usize).and_then(|b| b.data()) {
+                self.ext_defs.insert(i, props::parse_defs(&v));
             }
         }
-        d.pages = d.find_pages();
-        Ok(d)
+        self.pages = self.find_pages();
     }
 
     /// A record's attribute definitions (stored in it or in an entry).
@@ -195,8 +250,7 @@ impl Document {
     }
 
     pub fn entry_body(&self, n: usize) -> Option<&[u8]> {
-        let e = self.entries.get(n)?;
-        Some(&self.bytes[e.body_range.0..e.body_range.0 + e.body_range.1])
+        self.body(n).map(|b| b.bytes())
     }
 
     /// An object's drawing reference.
@@ -226,8 +280,7 @@ impl Document {
                 }
             })
             .filter_map(|a| write::read_ref(&a.value))
-            .filter_map(|(i, _)| self.entries.get(i as usize))
-            .map(|e| expanded_body(&self.bytes, e).unwrap_or_default())
+            .map(|(i, _)| self.body(i as usize).and_then(|b| b.data()).unwrap_or_default())
             .collect()
     }
 
@@ -247,9 +300,9 @@ impl Document {
             return;
         };
         let body = match &dr {
-            Drawing::Entry(i) => match self.entries.get(*i) {
-                Some(e) => Content::of_entry(&self.bytes, e),
-                None => None,
+            Drawing::Entry(i) => match self.body(*i) {
+                Some(BodyRef::Fields(b)) => Content::of_fields(b),
+                _ => None,
             },
             Drawing::Inline(v) => Content::of_fields(v),
         };

@@ -46,7 +46,7 @@ pub fn element(tag: u8, value: &[u8]) -> Vec<u8> {
 
 /// A new entry: the value of its `0x82` body, and whether it is a picture
 /// stored raw (those are also listed in the trailer's 0x8d table).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct NewEntry {
     pub body: Vec<u8>,
     pub picture: bool,

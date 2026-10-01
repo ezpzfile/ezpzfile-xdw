@@ -1440,11 +1440,9 @@ pub fn external_picture(d: &[u8]) -> Option<(Image, bool)> {
     if d.len() > 2 && d[0] == 0xff && d[1] == 0xd8 {
         return Some((Image { w: 0, h: 0, data: ImageData::Jpeg(d.to_vec()) }, false));
     }
-    // a DIB: BITMAPINFOHEADER then bits
+    // a DIB: BITMAPINFOHEADER then bits (possibly compressed, see dib)
     let inf = dib::info(d)?;
-    let size = u32le(d, 0) as usize;
-    let pal = inf.palette.len() * 4 + if inf.masks.is_some() && size == 40 { 12 } else { 0 };
-    let img = dib::decode(d, d.get(size + pal..)?)?;
+    let img = dib::decode_stored(d)?;
     Some((img, !inf.top_down))
 }
 
