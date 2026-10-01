@@ -18,6 +18,8 @@ use crate::write::{self, element};
 use std::collections::HashMap;
 
 pub const K_BINDER: i64 = 0xc014;
+/// A binder document's name as UTF-16 (DocuWorks 10; older ones: 4, Shift_JIS).
+const A_NAME_W: u32 = 70;
 const K_BINDER_LIST: i64 = 0x1401;
 const K_BINDER_ITEM: i64 = 0x1402;
 
@@ -119,6 +121,17 @@ pub fn decode_name(v: &[u8]) -> String {
         return text.into_owned();
     }
     utf16(v)
+}
+
+/// A binder document's name: 70 (UTF-16) when there, else 4.
+fn doc_name(rec: &Record) -> String {
+    match rec.get(A_NAME_W) {
+        Some(a) => {
+            let u: Vec<u16> = a.value.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).take_while(|&u| u != 0).collect();
+            String::from_utf16_lossy(&u)
+        }
+        None => rec.get(4).map(|a| decode_name(&a.value)).unwrap_or_default(),
+    }
 }
 
 impl Document {
@@ -294,7 +307,7 @@ impl Document {
             let n = self.pages.iter().filter(|p| p.record > i && p.record < end).count();
             out.push(BinderDoc {
                 record: i,
-                name: rec.get(4).map(|a| decode_name(&a.value)).unwrap_or_default(),
+                name: doc_name(rec),
                 first_page: first.unwrap_or_else(|| out.last().map(|d: &BinderDoc| d.first_page + d.pages).unwrap_or(0)),
                 pages: n,
             });
@@ -316,6 +329,9 @@ impl Document {
     pub fn rename_binder_doc(&mut self, k: usize, name: &str) -> Result<()> {
         let rec = self.binder_docs().get(k).map(|d| d.record).ok_or_else(|| Error::Unsupported(format!("no document {} in the binder", k + 1)))?;
         self.records[rec].set(0x80, 4, sjisz(name.trim()));
+        if self.records[rec].get(A_NAME_W).is_some() {
+            self.records[rec].set(0x80, A_NAME_W, utf16z(name.trim()));
+        }
         self.refresh();
         Ok(())
     }
@@ -373,6 +389,9 @@ impl Document {
             return Err(Error::Unsupported("the other file is not a DocuWorks document".into()));
         }
         let docs = self.binder_docs();
+        // DocuWorks 10 also keeps the name as UTF-16 (70); do the same when
+        // the binder already does
+        let wide = docs.iter().any(|d| self.records[d.record].get(A_NAME_W).is_some());
         let mut at_idx = if at < docs.len() { self.binder_item(at)? } else { subtree_end(&self.records, list) };
         let base = self.records[list].depth;
         let mut map = HashMap::new();
@@ -385,6 +404,9 @@ impl Document {
             let id = self.bump_lastmid(list, 2);
             let nm = if k == 0 && !name.trim().is_empty() { name.trim() } else { nm.as_str() };
             recs[0].set(0x80, 4, sjisz(nm));
+            if wide {
+                recs[0].set(0x80, A_NAME_W, utf16z(nm));
+            }
             recs[0].set(0x80, 3, props::ints_value(&[id]));
             let mut block = vec![Record { depth: base + 1, kind: props::num_bytes(K_BINDER_ITEM), attrs: Vec::new() }];
             block.extend(recs);

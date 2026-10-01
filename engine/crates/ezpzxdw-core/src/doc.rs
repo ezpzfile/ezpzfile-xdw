@@ -46,6 +46,8 @@ pub const K_MARKER: i64 = 0x801b;
 pub const K_POLYGON: i64 = 0x8042;
 pub const K_RECEIVED: i64 = 0x8040;
 pub const K_LINK: i64 = 0xc02f;
+/// A signature (DocuWorks 電子印鑑 / PKI), placed on the page like an annotation.
+pub const K_SIGNATURE: i64 = 0x8043;
 
 /// What kind of thing an object is, in words.
 pub fn kind_name(k: i64) -> &'static str {
@@ -65,6 +67,7 @@ pub fn kind_name(k: i64) -> &'static str {
         K_POLYGON => "polygon",
         K_RECEIVED => "received stamp",
         K_LINK => "link",
+        K_SIGNATURE => "signature",
         _ => "annotation",
     }
 }
@@ -230,11 +233,17 @@ impl Document {
                         let o = &r[k];
                         let kind = o.kind_num();
                         let osize = o.ints(5);
-                        let text = if kind == K_TEXT {
-                            self.named(k, "%Text(w").map(|a| utf16(&a.value)).or_else(|| self.named(k, "%Text").map(|a| crate::sjis::decode(&a.value)))
+                        // a text annotation's text; a sticky note's: the text on it
+                        let t = if kind == K_TEXT {
+                            Some(k)
+                        } else if kind == K_FUSEN {
+                            (k + 1..r.len()).take_while(|&m| r[m].depth > o.depth).find(|&m| r[m].kind_num() == K_TEXT)
                         } else {
                             None
                         };
+                        let text = t.and_then(|t| {
+                            self.named(t, "%Text(w").map(|a| utf16(&a.value)).or_else(|| self.named(t, "%Text").map(|a| crate::sjis::decode(a.value.split(|&b| b == 0).next().unwrap_or(&[]))))
+                        });
                         objects.push(Object {
                             place: j,
                             record: k,
@@ -334,6 +343,17 @@ impl Document {
             }
             4 | 1 if c.data.get(40..44) == Some(b" EMF") => {
                 emf::render_opts(&c.data, [0.0, 0.0, bw, bh], &pics, out, o.kind != K_CONTENT);
+            }
+            5 => {
+                // a scanned page as DocuWorks 10 stores it: a JPEG
+                match crate::pages::jpeg_size(&c.data) {
+                    Some((pw, ph)) => {
+                        out.images.push(Image { w: pw, h: ph, data: ImageData::Jpeg(c.data.clone()) });
+                        let image = (out.images.len() - 1) as u32;
+                        out.items.push(Item::Image { image, m: [bw as f32, 0.0, 0.0, bh as f32, 0.0, 0.0], clip: 0, alpha: 1.0 });
+                    }
+                    None => out.skipped.push(format!("{}: picture page not readable", o.kind_name)),
+                }
             }
             1 | 7 => {
                 // a bitmap page (DIB)

@@ -69,6 +69,39 @@ pub enum Shape {
         #[serde(default = "stamp_red")]
         color: u32,
     },
+    /// A sticky note (付箋): a coloured note with text on it, stored as
+    /// DocuWorks stores one (the note, and a text annotation inside it).
+    Sticky {
+        text: String,
+        /// Points.
+        #[serde(default = "twelve")]
+        size: f64,
+        /// Text colour, 0xRRGGBB.
+        #[serde(default)]
+        color: u32,
+        /// The note's colour, 0xRRGGBB.
+        #[serde(default = "sticky_yellow")]
+        background: u32,
+    },
+}
+
+fn twelve() -> f64 {
+    12.0
+}
+
+fn sticky_yellow() -> u32 {
+    0xffff64
+}
+
+/// Where the text sits on a sticky note (1/100 mm from its corner), and the
+/// note's shadow, as DocuWorks makes them.
+const STICKY_PAD: f64 = 300.0;
+const STICKY_SHADOW: f64 = 50.0;
+
+/// Size of a sticky note for `text` at `size` points (1/100 mm).
+pub fn sticky_box(text: &str, size: f64) -> (f64, f64) {
+    let (tw, th) = text_box(text, size);
+    ((tw + 2.0 * STICKY_PAD + STICKY_SHADOW).max(3000.0), (th + 2.0 * STICKY_PAD + STICKY_SHADOW).max(1500.0))
 }
 
 fn one() -> f64 {
@@ -128,19 +161,17 @@ pub fn draw(shape: &Shape, w: f64, h: f64) -> Vec<u8> {
                 let i = if frame.is_some() { (fw + 1) / 2 } else { 0 };
                 e.rectangle(i, i, uw - i + 1, uh - i + 1);
             }
-            let em_u = (size * 300.0 / 72.0).round() as i32;
-            e.font(em_u, if *bold { 700 } else { 400 }, false, FACE);
-            e.text_color(*color);
-            let m = emfw::units(MARGIN);
-            let lh = (em_u as f64 * LINE).round() as i32;
-            let top_pad = ((lh - em_u) / 2).max(0);
-            for (k, line) in text.split('\n').enumerate() {
-                if line.is_empty() {
-                    continue;
-                }
-                let adv: Vec<i32> = line.chars().map(|c| (advance(c) * em_u as f64).round() as i32).collect();
-                e.text(m, m + k as i32 * lh + top_pad, line, &adv);
-            }
+            text_lines(&mut e, emfw::units(MARGIN), emfw::units(MARGIN), text, *size, *color, *bold);
+        }
+        Shape::Sticky { text, size, color, background } => {
+            // shadow, the note with a grey edge, then the text
+            let s = emfw::units(STICKY_SHADOW).max(1);
+            e.pen_brush(None, Some(0x999999));
+            e.rectangle(s, s, uw + 1, uh + 1);
+            e.pen_brush(Some((0x666666, 1)), Some(*background));
+            e.rectangle(0, 0, uw - s, uh - s);
+            let m = emfw::units(STICKY_PAD + MARGIN);
+            text_lines(&mut e, m, m, text, *size, *color, false);
         }
         Shape::Rect { stroke, width, fill, highlight } => {
             let wu = emfw::units(width * 100.0 / 2.835).max(1);
@@ -171,6 +202,23 @@ pub fn draw(shape: &Shape, w: f64, h: f64) -> Vec<u8> {
         Shape::Stamp { top, date, bottom, color } => draw_stamp(&mut e, uw, uh, top, date, bottom, *color),
     }
     e.finish(w, h)
+}
+
+/// Lines of text from (x, y) (drawing units), the way text annotations
+/// lay them out.
+fn text_lines(e: &mut Emf, x: i32, y: i32, text: &str, size: f64, color: u32, bold: bool) {
+    let em_u = (size * 300.0 / 72.0).round() as i32;
+    e.font(em_u, if bold { 700 } else { 400 }, false, FACE);
+    e.text_color(color);
+    let lh = (em_u as f64 * LINE).round() as i32;
+    let top_pad = ((lh - em_u) / 2).max(0);
+    for (k, line) in text.split('\n').enumerate() {
+        if line.is_empty() {
+            continue;
+        }
+        let adv: Vec<i32> = line.chars().map(|c| (advance(c) * em_u as f64).round() as i32).collect();
+        e.text(x, y + k as i32 * lh + top_pad, line, &adv);
+    }
 }
 
 /// The date stamp picture: an oval filling the box, two lines across it,
@@ -219,15 +267,20 @@ pub fn stamp_date(year: i32, month: u32, day: u32) -> String {
     format!("'{:02}.{:02}.{:02}", year.rem_euclid(100), month, day)
 }
 
-/// Year, month and day in a stamp date written like `'26.10.01`,
-/// `2026.10.01`, `2026/10/1` or `2026-10-01`.
-fn stamp_ymd(date: &str) -> Option<(String, String, String)> {
-    let t = date.trim().trim_start_matches(['\'', '’']);
-    let parts: Vec<&str> = t.split(['.', '/', '-']).map(|x| x.trim()).collect();
-    if parts.len() != 3 || parts.iter().any(|p| p.is_empty() || !p.chars().all(|c| c.is_ascii_digit())) {
-        return None;
+/// A stamp date as DocuWorks keeps it: the character before the year,
+/// year, month, day (`'26.10.01` → `'`, 26, 10, 01; `2026.10.01` → none,
+/// 2026, 10, 01). Other text goes into the year as it is.
+fn stamp_parts(date: &str) -> (String, String, String, String) {
+    let t = date.trim();
+    let (prefix, rest) = match t.chars().next() {
+        Some(c) if !c.is_ascii_digit() => (c.to_string(), &t[c.len_utf8()..]),
+        _ => (String::new(), t),
+    };
+    let parts: Vec<&str> = rest.split(['.', '/', '-']).map(|x| x.trim()).collect();
+    if parts.len() == 3 && parts.iter().all(|p| !p.is_empty() && p.chars().all(|c| c.is_ascii_digit())) {
+        return (prefix, parts[0].into(), parts[1].into(), parts[2].into());
     }
-    Some((parts[0].to_string(), parts[1].to_string(), parts[2].to_string()))
+    (String::new(), t.into(), String::new(), String::new())
 }
 
 /// Attribute 7 holding a drawing: the body fields DocuWorks writes for
@@ -276,6 +329,33 @@ pub(crate) fn sjisz(s: &str) -> Vec<u8> {
     let mut v = crate::sjis::encode(s);
     v.push(0);
     v
+}
+
+/// The records for a shape: the object, and for a sticky note the text on it
+/// (a placement of the note's kind, then the text annotation).
+fn object_records(depth: u8, id: i64, shape: &Shape, w: f64, h: f64) -> Vec<Record> {
+    let Shape::Sticky { text, size, color, background } = shape else {
+        return vec![object_record(depth, id, shape, w, h)];
+    };
+    let inner = Shape::Text { text: text.clone(), size: *size, color: *color, bold: false, background: None, frame: None };
+    let (tw, th) = text_box(text, *size);
+    let note = Record {
+        depth,
+        kind: props::num_bytes(doc::K_FUSEN),
+        attrs: vec![
+            int_attr(5, &[w.round() as i64, h.round() as i64]),
+            defs_attr(&[(2001, 2, "FSN_COLOR"), (2002, 2, "%AutoResize"), (2004, 2, "lastmid")]),
+            int_attr(2001, &[emfw::colorref(*background) as i64]),
+            int_attr(2002, &[0]),
+            int_attr(3, &[id]),
+            int_attr(2004, &[1]),
+            drawing_attr(&draw(shape, w, h), w, h),
+        ],
+    };
+    // inside a note the text's placement has the note's kind
+    let mut place = place_record(depth + 1, STICKY_PAD, STICKY_PAD, tw, th);
+    place.kind = props::num_bytes(doc::K_FUSEN);
+    vec![note, place, object_record(depth + 2, 1, &inner, tw, th)]
 }
 
 /// The object record (kind and settings) for a shape.
@@ -406,32 +486,49 @@ fn object_record(depth: u8, id: i64, shape: &Shape, w: f64, h: f64) -> Record {
             attrs.push(named(2010, d));
         }
         Shape::Stamp { top, date, bottom, color } => {
-            // The names follow DocuWorks' published API names for date
-            // stamps; the viewer draws the stamp from the stored picture.
+            // what DocuWorks 10 itself writes for a date stamp (made with
+            // its API and read back): POST is the upper text, NAME the lower
             kind = doc::K_STAMP;
-            let (y, m, dd) = stamp_ymd(date).unwrap_or_default();
+            let (prefix, y, m, dd) = stamp_parts(date);
             attrs.push(defs_attr(&[
-                (2001, 4, "%TopField"),
-                (2002, 4, "%BottomField"),
-                (2003, 2, "%DateStyle"),
-                (2004, 4, "%YearField"),
-                (2005, 4, "%MonthField"),
-                (2006, 4, "%DayField"),
-                (2007, 2, "%DateOrder"),
-                (2008, 2, "%BorderColor"),
-                (2009, 4, "%Text(w"),
+                (2001, 2, "STAMPATT_COLOR"),
+                (2002, 2, "STAMPATT_TRANSPARENT"),
+                (2003, 4, "STAMPATT_POST"),
+                (2004, 4, "STAMPATT_NAME"),
+                (2005, 2, "STAMPATT_DATEFLAG"),
+                (2009, 2, "STAMPATT_ERA"),
+                (2010, 2, "STAMPATT_BASEYEAR"),
+                (2011, 4, "STAMPATT_PREFIX"),
+                (2012, 4, "STAMPATT_DATEFORMAT"),
+                (2013, 2, "STAMPATT_DATEORDER"),
+                (2015, 2, "%CCP_STAMPATT_POST"),
+                (2016, 4, "STAMPATT_POST(w"),
+                (2017, 2, "%CCP_STAMPATT_NAME"),
+                (2018, 4, "STAMPATT_NAME(w"),
+                (2019, 4, "STAMPATT_YEAR"),
+                (2020, 4, "STAMPATT_MONTH"),
+                (2021, 4, "STAMPATT_DAY"),
             ]));
-            attrs.push(named(2001, sjisz(top)));
-            attrs.push(named(2002, sjisz(bottom)));
-            attrs.push(int_attr(2003, &[1])); // manual date
-            attrs.push(named(2004, sjisz(&y)));
-            attrs.push(named(2005, sjisz(&m)));
-            attrs.push(named(2006, sjisz(&dd)));
-            attrs.push(int_attr(2007, &[0])); // year, month, day
-            attrs.push(int_attr(2008, &[emfw::colorref(*color) as i64]));
-            // the three lines as shown, so this editor can read them back
-            attrs.push(named(2009, utf16z(&format!("{top}\n{date}\n{bottom}"))));
+            attrs.push(int_attr(2001, &[emfw::colorref(*color) as i64]));
+            attrs.push(int_attr(2002, &[0]));
+            attrs.push(int_attr(2009, &[0]));
+            attrs.push(int_attr(2010, &[1]));
+            attrs.push(named(2011, sjisz(&prefix)));
+            attrs.push(named(2012, sjisz("yy.mm.dd")));
+            attrs.push(int_attr(2013, &[0])); // year, month, day
+            attrs.push(named(2003, sjisz(top)));
+            attrs.push(int_attr(2015, &[932]));
+            attrs.push(named(2016, utf16z(top)));
+            attrs.push(named(2004, sjisz(bottom)));
+            attrs.push(int_attr(2017, &[932]));
+            attrs.push(named(2018, utf16z(bottom)));
+            attrs.push(int_attr(2005, &[1])); // the date as given, not today's
+            attrs.push(named(2019, sjisz(&y)));
+            attrs.push(named(2020, sjisz(&m)));
+            attrs.push(named(2021, sjisz(&dd)));
+            attrs.push(int_attr(68, &[0]));
         }
+        Shape::Sticky { .. } => unreachable!("sticky notes are made by object_records"),
     }
     attrs.push(int_attr(3, &[id]));
     attrs.push(int_attr(5, &size));
@@ -445,6 +542,7 @@ fn box_size(shape: &Shape, w: f64, h: f64) -> (f64, f64) {
     match shape {
         Shape::Text { text, size, .. } if w <= 0.0 || h <= 0.0 => text_box(text, *size),
         Shape::Stamp { .. } if w <= 0.0 || h <= 0.0 => (STAMP_SIZE, STAMP_SIZE),
+        Shape::Sticky { text, size, .. } if w <= 0.0 || h <= 0.0 => sticky_box(text, *size),
         _ => (w.max(100.0), h.max(100.0)),
     }
 }
@@ -457,6 +555,16 @@ fn draw_mode(frame: bool, fill: bool) -> i64 {
         (false, true) => 1,
         _ => 0,
     }
+}
+
+/// A placement; sticky notes' placements also carry 54 = 1 (as DocuWorks
+/// writes them).
+fn placement_for(shape: &Shape, depth: u8, x: f64, y: f64, w: f64, h: f64) -> Record {
+    let mut p = place_record(depth, x, y, w, h);
+    if matches!(shape, Shape::Sticky { .. }) {
+        p.attrs.insert(0, int_attr(54, &[1]));
+    }
+    p
 }
 
 pub(crate) fn place_record(depth: u8, x: f64, y: f64, w: f64, h: f64) -> Record {
@@ -532,8 +640,11 @@ impl Document {
         let pr = self.page(page)?.record;
         let d = self.records[pr].depth;
         let at = subtree_end(&self.records, pr);
-        self.records.insert(at, place_record(d + 1, x, y, w, h));
-        self.records.insert(at + 1, object_record(d + 2, id, shape, w, h));
+        let mut recs = vec![placement_for(shape, d + 1, x, y, w, h)];
+        recs.extend(object_records(d + 2, id, shape, w, h));
+        for (k, r) in recs.into_iter().enumerate() {
+            self.records.insert(at + k, r);
+        }
         self.refresh();
         Ok(self.page(page)?.objects.len() - 1)
     }
@@ -551,6 +662,9 @@ impl Document {
         if o.kind == K_CONTENT {
             return Err(Error::Unsupported("the page content itself cannot be deleted; delete the page".into()));
         }
+        if o.kind == doc::K_SIGNATURE {
+            return Err(Error::Unsupported("a signature cannot be removed here".into()));
+        }
         let end = subtree_end(&self.records, o.place);
         self.records.drain(o.place..end);
         self.refresh();
@@ -559,8 +673,8 @@ impl Document {
 
     pub fn move_object(&mut self, page: usize, obj: usize, x: f64, y: f64) -> Result<()> {
         let o = self.object(page, obj)?;
-        if o.kind == K_CONTENT {
-            return Err(Error::Unsupported("the page content cannot be moved".into()));
+        if o.kind == K_CONTENT || o.kind == doc::K_SIGNATURE {
+            return Err(Error::Unsupported("the page content and signatures cannot be moved".into()));
         }
         self.records[o.place].set(0x80, 52, props::ints_value(&[x.round() as i64, y.round() as i64]));
         self.refresh();
@@ -578,9 +692,9 @@ impl Document {
         let id = self.records[o.record].int(3).unwrap_or(1);
         let d = self.records[o.record].depth;
         let end = subtree_end(&self.records, o.place);
-        let new_place = place_record(d - 1, x, y, w, h);
-        let new_obj = object_record(d, id, shape, w, h);
-        self.records.splice(o.place..end, [new_place, new_obj]);
+        let mut recs = vec![placement_for(shape, d - 1, x, y, w, h)];
+        recs.extend(object_records(d, id, shape, w, h));
+        self.records.splice(o.place..end, recs);
         self.refresh();
         Ok(())
     }
@@ -796,7 +910,7 @@ impl Document {
                 let size = ni("%Size").unwrap_or(120) as f64 / 10.0;
                 let color = rgb(ni("%Color").unwrap_or(0));
                 let bold = ni("%Style").unwrap_or(0) & 1 != 0;
-                let bg = ni("%ATTR_BKGND_COLOR").filter(|&c| c != 65793 && ni("%BkGndPermeable").unwrap_or(1) == 0).map(rgb);
+                let bg = ni("%ATTR_BKGND_COLOR").filter(|&c| c != 65793 && ni("%BkGndPermeable").unwrap_or(0) == 0).map(rgb);
                 let frame = (ni("%FrameOnOff").unwrap_or(0) != 0).then(|| rgb(ni("%FrameColor").unwrap_or(0)));
                 Some(Shape::Text { text, size, color, bold, background: bg, frame })
             }
@@ -825,15 +939,42 @@ impl Document {
                 Some(Shape::Line { points, color, width })
             }
             doc::K_STAMP => {
-                // only stamps made here keep their lines in %Text(w
-                let t = utf16_str(&self.named(o.record, "%Text(w")?.value);
-                let mut it = t.splitn(3, '\n');
-                let (top, date, bottom) = (it.next()?.to_string(), it.next()?.to_string(), it.next()?.to_string());
-                let color = rgb(ni("%BorderColor").unwrap_or(0x1200e6));
-                Some(Shape::Stamp { top, date, bottom, color })
+                let text = |name: &str| -> String {
+                    match self.named(o.record, &format!("{name}(w")) {
+                        Some(a) => utf16_str(&a.value),
+                        None => self.named(o.record, name).map(|a| crate::sjis::decode(a.value.split(|&b| b == 0).next().unwrap_or(&[]))).unwrap_or_default(),
+                    }
+                };
+                // a stamp that shows today's date (DATEFLAG 0) is redrawn
+                // with the date it was stamped: its year, month and day
+                let (y, m, d) = (text("STAMPATT_YEAR"), text("STAMPATT_MONTH"), text("STAMPATT_DAY"));
+                let date = if m.is_empty() && d.is_empty() { y } else { format!("{}{y}.{m}.{d}", text("STAMPATT_PREFIX")) };
+                if date.is_empty() {
+                    return None; // a stamp with today's date and no stored date: move / delete only
+                }
+                let color = rgb(ni("STAMPATT_COLOR").unwrap_or(0x1200e6));
+                Some(Shape::Stamp { top: text("STAMPATT_POST"), date, bottom: text("STAMPATT_NAME"), color })
+            }
+            doc::K_FUSEN => {
+                // the text annotation on the note (its first one)
+                let end = subtree_end(&self.records, o.record);
+                let t = (o.record + 1..end).find(|&k| self.records[k].kind_num() == K_TEXT)?;
+                let ti = |name: &str| self.named(t, name).and_then(|a| props::ints(&a.value).first().copied());
+                let text = self.named(t, "%Text(w").map(|a| utf16_str(&a.value)).or_else(|| self.named(t, "%Text").map(|a| crate::sjis::decode(a.value.split(|&b| b == 0).next().unwrap_or(&[]))))?;
+                Some(Shape::Sticky {
+                    text,
+                    size: ti("%Size").unwrap_or(120) as f64 / 10.0,
+                    color: rgb(ti("%Color").unwrap_or(0)),
+                    background: rgb(ni("FSN_COLOR").unwrap_or(0x64ffff)),
+                })
             }
             _ => None,
         }
+    }
+
+    /// Does the document carry a signature (editing makes it invalid)?
+    pub fn is_signed(&self) -> bool {
+        self.records.iter().any(|r| r.kind_num() == doc::K_SIGNATURE)
     }
 
     /// Is `obj` one of the annotation kinds this editor can redraw?

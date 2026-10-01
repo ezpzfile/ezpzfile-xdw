@@ -375,6 +375,12 @@ impl XdwDoc {
         Ok(r)
     }
 
+    /// Does the document carry a signature (editing makes it invalid)?
+    #[wasm_bindgen(js_name = isSigned)]
+    pub fn is_signed(&self) -> bool {
+        self.doc.is_signed()
+    }
+
     /// Today's date as a date stamp shows it ('26.10.01).
     #[wasm_bindgen(js_name = stampDate)]
     pub fn stamp_date(year: i32, month: u32, day: u32) -> String {

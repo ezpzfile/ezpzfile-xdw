@@ -54,17 +54,16 @@ const S = {
   thumbs: [],
   binder: null,      // {name, docs:[{name, first_page, pages}]} for a .xbd
   ext: ".xdw",
-  sticky: store.get("sticky", "#fff59d"),
+  sticky: store.get("sticky2", "#ffff64"),
   stamp: store.get("stamp", { top: "", bottom: "", fmt: "yy", size: 1800, color: "#e60012" }),
 };
 const sc = () => S.zoom * U;
 
 const COLORS = ["#131a2e", "#d40000", "#0155ff", "#00a36c", "#f08c00", "#8b5cf6"];
 const HIGHLIGHTS = ["#ffe14d", "#9cf0b0", "#9fd3ff", "#ffb3d9", "#ffc58a"];
-const STICKIES = ["#fff59d", "#c8f7c5", "#bfe3ff", "#ffd1e8", "#ffe0b2"];
+// DocuWorks' own sticky-note colours
+const STICKIES = ["#ffff64", "#fffac3", "#ffc2ff", "#9dbfff", "#9dffc2"];
 const STAMP_COLORS = ["#e60012", "#0155ff", "#131a2e"];
-/** A darker shade (for a sticky note's edge). */
-const darker = (n) => (Math.round(((n >> 16) & 255) * 0.78) << 16) | (Math.round(((n >> 8) & 255) * 0.78) << 8) | Math.round((n & 255) * 0.78);
 function stampDate(fmt) {
   const d = new Date();
   const p = (v) => String(v).padStart(2, "0");
@@ -464,7 +463,7 @@ function bindPage(div, i) {
     S.cur = i; markCurrent(); updateStatus();
     if (S.tool === "text" || S.tool === "sticky") {
       e.preventDefault();
-      openTextEditor(i, u, v, null, S.tool === "sticky" ? stickyLook() : null);
+      openTextEditor(i, u, v, null, S.tool === "sticky" ? stickyShape() : null);
       return;
     }
     if (S.tool === "stamp") {
@@ -548,7 +547,7 @@ function bindPage(div, i) {
     const k = objAt(i, u, v);
     if (k < 0) return;
     const o = S.info[i].objects[k];
-    if (o.kind === "text" && o.shape) openTextEditor(i, o.x, o.y, k);
+    if (o.shape && (o.shape.type === "text" || o.shape.type === "sticky")) openTextEditor(i, o.x, o.y, k);
     else if (o.shape && o.shape.type === "stamp") select(i, k);
   });
 }
@@ -575,15 +574,15 @@ function scaleShape(shape, o, g) {
 }
 
 // ------------------------------------------------------------------ text annotations
-function stickyLook() {
-  const bg = num(S.sticky);
-  return { background: bg, frame: darker(bg), color: 0x131a2e };
+/** A new sticky note (stored as DocuWorks stores one: the note and a text on it). */
+function stickyShape() {
+  return { type: "sticky", text: "", size: S.size, color: 0x131a2e, background: num(S.sticky) };
 }
 
-function openTextEditor(p, x, y, k, look) {
+function openTextEditor(p, x, y, k, base) {
   closeTextEditor(true);
   const o = k == null ? null : S.info[p].objects[k];
-  const shape = o ? o.shape : { type: "text", text: "", size: S.size, color: num(S.color), bold: false, ...(look || {}) };
+  const shape = o ? o.shape : base || { type: "text", text: "", size: S.size, color: num(S.color), bold: false };
   const ta = el("textarea", { class: "textedit", spellcheck: "false" });
   ta.value = shape.text;
   const px = shape.size * 96 / 72 * S.zoom;
@@ -686,8 +685,8 @@ function renderProps() {
   }
   const { p, o } = S.sel;
   const ob = S.info[p].objects[o];
-  const names = { text: "テキスト", rectangle: "四角形", ellipse: "楕円", line: "直線", marker: "マーカー", picture: "画像", "date stamp": "日付印", "sticky note": "付箋", "received stamp": "受信印", shape: "図形", polygon: "多角形", link: "リンク", "header/footer": "ページフォーム", object: "オブジェクト", annotation: "注釈" };
-  const isSticky = ob.shape && ob.shape.type === "text" && ob.shape.background != null && ob.shape.frame != null;
+  const names = { text: "テキスト", rectangle: "四角形", ellipse: "楕円", line: "直線", marker: "マーカー", picture: "画像", "date stamp": "日付印", "sticky note": "付箋", "received stamp": "受信印", shape: "図形", polygon: "多角形", link: "リンク", signature: "署名", "header/footer": "ページフォーム", object: "オブジェクト", annotation: "注釈" };
+  const isSticky = ob.shape && ob.shape.type === "sticky";
   const kind = ob.shape && ob.shape.type === "rect" && ob.shape.highlight ? "蛍光ペン" : isSticky ? "付箋" : names[ob.kind] || ob.kind;
   const box = el("div", { class: "infobody" });
   box.append(el("div", { class: "kv" },
@@ -697,7 +696,7 @@ function renderProps() {
   const s = ob.shape;
   const change = (patch) => {
     const ns = { ...s, ...patch };
-    const auto = ns.type === "text";
+    const auto = ns.type === "text" || ns.type === "sticky";
     act(() => { S.ed.changeAnnotation(p, o, ob.x, ob.y, auto ? 0 : ob.w, auto ? 0 : ob.h, JSON.stringify(ns)); return { pages: [p], sel: { p, o } }; });
   };
   const colorRow = (label, value, list, onpick, allowNone) => {
@@ -709,17 +708,17 @@ function renderProps() {
     row.append(inp);
     return row;
   };
-  if (s && s.type === "text") {
+  if (s && (s.type === "text" || s.type === "sticky")) {
     const ta = el("textarea", { class: "field" });
     ta.value = s.text;
     box.append(el("label", { class: "flabel" }, "文字", ta));
     ta.addEventListener("change", () => { if (ta.value.trim()) change({ text: ta.value }); });
     const size = el("input", { class: "num", type: "number", min: "4", max: "200", step: "1", value: String(s.size) });
     size.addEventListener("change", () => change({ size: Math.max(4, Math.min(200, +size.value || 12)) }));
-    const bold = el("button", { class: "pbtn" + (s.bold ? " on" : ""), text: "太字", onclick: () => change({ bold: !s.bold }) });
+    const bold = isSticky ? null : el("button", { class: "pbtn" + (s.bold ? " on" : ""), text: "太字", onclick: () => change({ bold: !s.bold }) });
     box.append(el("div", { class: "row" }, el("label", { text: "サイズ" }), size, el("span", { class: "lab", text: "pt" }), bold));
     box.append(colorRow("色", s.color, COLORS, (c) => change({ color: c ?? 0 })));
-    if (isSticky) box.append(colorRow("付箋", s.background, STICKIES, (c) => change(c == null ? { background: null, frame: null } : { background: c, frame: darker(c) }), true));
+    if (isSticky) box.append(colorRow("付箋", s.background, STICKIES, (c) => { if (c != null) { S.sticky = hex(c); store.set("sticky2", S.sticky); change({ background: c }); } }));
     else box.append(colorRow("背景", s.background, ["#ffffff", ...HIGHLIGHTS], (c) => change({ background: c }), true));
   } else if (s && s.type === "stamp") {
     const fieldRow = (label, key) => {
@@ -740,9 +739,9 @@ function renderProps() {
     box.append(colorRow("色", s.color, COLORS, (c) => change({ color: c ?? 0 })));
     box.append(widthRow(s.width, (w) => change({ width: w })));
   } else if (ob.kind !== "page") {
-    box.append(el("p", { class: "note", text: ob.kind === "picture" ? "画像の注釈です。移動・削除ができます（DocuWorks では白い部分も不透明に表示されます）。" : "この注釈は移動と削除ができます（中身の変更は DocuWorks で）。" }));
+    box.append(el("p", { class: "note", text: ob.kind === "signature" ? "署名です。ここでは動かしたり消したりできません。" : ob.kind === "picture" ? "画像の注釈です。移動・削除ができます（DocuWorks では白い部分も不透明に表示されます）。" : "この注釈は移動と削除ができます（中身の変更は DocuWorks で）。" }));
   }
-  if (ob.kind !== "page") box.append(el("div", { class: "row" }, el("button", { class: "pbtn", html: ic("trash-2") + "削除", onclick: deleteSelected })));
+  if (ob.kind !== "page" && ob.kind !== "signature") box.append(el("div", { class: "row" }, el("button", { class: "pbtn", html: ic("trash-2") + "削除", onclick: deleteSelected })));
   host.append(box);
 }
 
@@ -769,6 +768,7 @@ async function openFile(file) {
     S.ed = ed;
     S.name = file.name.replace(/\.(xdw|xbd)$/i, "");
     S.ext = ed.binder() !== "null" ? ".xbd" : ".xdw";
+    if (ed.isSigned()) setTimeout(() => toast("この文書には署名があります。編集して保存すると、署名は無効になります。", 7000), 400);
     S.sel = null;
     S.cur = 0;
     S.info = JSON.parse(ed.pages());

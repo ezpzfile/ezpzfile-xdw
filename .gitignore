@@ -7,3 +7,4 @@
 /web/pkg/
 /web/dist/
 __pycache__/
+/tools/dwapi/*.exe

@@ -152,10 +152,10 @@ attributes whose name ends in `(w`).
 |---|---|
 | 8010 | page content |
 | 8011 | text annotation |
-| 801a | sticky note (付箋) — not in the samples |
+| 801a | sticky note (付箋); also the kind of the placements inside it |
 | 801b | marker — not in the samples |
 | 802e | page form (header / footer) |
-| 8033 | date stamp (日付印) — not in the samples |
+| 8033 | date stamp (日付印) |
 | 803c | line |
 | 803d | rectangle |
 | 803e | ellipse |
@@ -165,6 +165,7 @@ attributes whose name ends in `(w`).
 | 8045 | custom annotation (shapes of newer versions: polygon points in `%annotation_customdata`) |
 | 800f | embedded OLE object |
 | c02f | link |
+| 8043 | signature (電子印鑑 / PKI): placed like an annotation, not one for the API |
 
 The numbers are the annotation type ids of DocuWorks' published API
 (`XDW_AID_…`). The viewer draws every kind from its stored drawing (attribute
@@ -182,7 +183,8 @@ for binder documents) and update it.
 [0] c014  binder           4 = binder name (UTF-16LE + one zero byte), %bindersize, %bindercolor
   [1] 1401  documents      lastmid
     [2] 1402               (no attributes)
-      [3] c013  document   4 = document name (Shift_JIS + zero), 3 = number
+      [3] c013  document   4 = document name (Shift_JIS + zero), 3 = number;
+                           DocuWorks 10 writes the name as 70 (UTF-16 + zero) instead
         [4] 1303 …         the document's pages, as in a .xdw
   [1] 1304
 ```
@@ -191,7 +193,8 @@ A standalone `.xdw` root (c013) usually has no attributes; adding it to a
 binder is: copy its subtree three levels deeper under a new 1402, give it 4
 and 3, copy the entries it refers to [viewer: added, renamed and reordered
 documents show in the document list with their names; Japanese names in
-Shift_JIS display correctly].
+Shift_JIS display correctly. DocuWorks 10 API: reads 4 when there is no 70,
+and 70 when there is].
 
 Every object sits in a placement (1302) that gives its position (52, 1/100 mm
 from the page's top-left) and size (childdim) [viewer: moving 52 moves the
@@ -242,10 +245,21 @@ swap the page size, move and swap every placement, add 90 to every object's 61.
   nothing]
 - text with a frame: `%FrameOnOff`; the viewer program also knows
   `%FrameColor` and `%FrameThick` (names found in DWVLT.exe)
-- date stamp (8033) as written here: the drawing, plus `%TopField`,
-  `%BottomField`, `%DateStyle`, `%YearField`, `%MonthField`, `%DayField`,
-  `%DateOrder`, `%BorderColor` — the names of DocuWorks' published API, not
-  confirmed against files made by DocuWorks Desk
+- date stamp (8033), as DocuWorks 10 writes it [made with its API, read back]:
+  `STAMPATT_COLOR` (COLORREF), `STAMPATT_TRANSPARENT`, `STAMPATT_POST`
+  (upper text, Shift_JIS) with `STAMPATT_POST(w` (UTF-16) and
+  `%CCP_STAMPATT_POST` = 932, `STAMPATT_NAME` (lower text, same three),
+  `STAMPATT_DATEFLAG` (1 = the stored date), `STAMPATT_ERA`,
+  `STAMPATT_BASEYEAR`, `STAMPATT_PREFIX` (the character before the year,
+  `'`), `STAMPATT_DATEFORMAT` (`yy.mm.dd`), `STAMPATT_DATEORDER`,
+  `STAMPATT_YEAR` / `_MONTH` / `_DAY` (text: a four-digit year with no prefix
+  gives `2026.10.01`), 68 = 0, and an inline drawing. The API names
+  (`%TopField` …) map onto these
+- sticky note (801a): `FSN_COLOR` (COLORREF), `%AutoResize`, 3, `lastmid`, a
+  drawing (shadow 0.5 mm in 0x999999, the note with a 0x666666 edge, and the
+  text on it); its placement (1302) also has 54 = 1. The text is a child:
+  a placement **of kind 801a** (52 relative to the note, childdim) holding a
+  text annotation (8011). The API sees one annotation with one child
 
 ## 5. Drawings
 
@@ -313,6 +327,11 @@ BITMAPINFO, then  u32 1, u32 stored size, u32 size, u32 rows,
 
 ### 5.4 Picture pages
 
+Kind 5 (DocuWorks 10 scans, photos): the body's data is a JPEG; 0x87 / 0x88
+are its size in pixels, 0x8b / 0x8c pixels per metre; the content record
+names `cmp` = 5, `dpt` (8 grey, 24 colour), `dpi`.
+
+
 Scanned and image pages are page EMFs at 600 dpi without a window, that draw
 JPEG pictures with `DWb` + `DWc` (the scanner writes strips of 24 rows). Each
 picture is a raw entry: `u32 total length, 0, width, height` + JPEG, listed in
@@ -327,7 +346,9 @@ JPEG shows the picture].
 4. Trailer 0x86 = the trailer value's length; lengths written the DocuWorks way.
 5. Read the result back and compare the tree before handing it out.
 
-Files written this way open in DocuWorks Viewer Light with added text,
+Files written this way open in DocuWorks 10 itself (its API reads the same
+pages, annotations and settings and draws every page; Desk lists them with
+their pages) and in DocuWorks Viewer Light, with added text,
 highlighter, rectangle, ellipse and line annotations, moved annotations,
 turned, deleted and reordered pages, sticky notes, date stamps, picture
 annotations, new blank / picture pages, pages copied from other documents,
@@ -340,7 +361,6 @@ pictures, outsourced definitions) and renumbers the references.
 - trailer 0x82, header 0x80 / 0x83, page attributes 57 / 62 / 69 / 14
 - the WMF comment records `DW\x02\x00…03` in old pages (not needed to draw)
 - 8045 custom annotation data, OLE objects
-- the settings DocuWorks Desk writes for date stamps, sticky notes and
-  markers (no samples; the drawing is what the viewer uses)
+- markers, polygons, received stamps as Desk writes them
 - making picture annotations see-through
-- signatures, passwords and DocuWorks 9+ features not present in the samples
+- signatures (8043: `%sigver`, `%spd`, `%pdbv` …), passwords

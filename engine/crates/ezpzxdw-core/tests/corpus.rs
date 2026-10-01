@@ -111,8 +111,12 @@ fn new_pages_stamps_and_binder_documents() {
         let n = d.pages.len();
         let stamp = Shape::Stamp { top: "受付".into(), date: "'26.10.01".into(), bottom: "EZPZ".into(), color: 0xe60012 };
         d.add_annotation(0, 15000.0, 1500.0, 0.0, 0.0, &stamp).unwrap();
-        let sticky = Shape::Text { text: "付箋".into(), size: 12.0, color: 0, bold: false, background: Some(0xfff59d), frame: Some(0xc7bf7a) };
+        let sticky = Shape::Sticky { text: "付箋\n2行目".into(), size: 12.0, color: 0, background: 0xffff64 };
         d.add_annotation(0, 1500.0, 1500.0, 0.0, 0.0, &sticky).unwrap();
+        let boxed = Shape::Text { text: "枠つき".into(), size: 10.0, color: 0, bold: false, background: Some(0xfff59d), frame: Some(0xc7bf7a) };
+        d.add_annotation(0, 1500.0, 5000.0, 0.0, 0.0, &boxed).unwrap();
+        let stamp4 = Shape::Stamp { top: "EZPZ".into(), date: "2026.10.01".into(), bottom: "総務".into(), color: 0x131a2e };
+        d.add_annotation(0, 12000.0, 1500.0, 0.0, 0.0, &stamp4).unwrap();
         d.insert_blank_page(1.min(n), 21000.0, 29700.0).unwrap();
         let (pw, ph) = a4_for(jw, jh);
         d.insert_image_page(d.pages.len(), pw, ph, &Jpeg { data: jpeg, w: jw, h: jh }, None, Some(&Thumb { rgba: &thumb, w: 10, h: 14 })).unwrap();
@@ -136,6 +140,8 @@ fn new_pages_stamps_and_binder_documents() {
         let shapes: Vec<Shape> = d.pages.iter().enumerate().flat_map(|(p, pg)| (0..pg.objects.len()).filter_map(|o| back.shape_of(p, o)).collect::<Vec<_>>()).collect();
         assert!(shapes.contains(&stamp), "{name}: stamp");
         assert!(shapes.contains(&sticky), "{name}: sticky");
+        assert!(shapes.contains(&boxed), "{name}: text with background");
+        assert!(shapes.contains(&stamp4), "{name}: stamp with a four-digit year");
         for k in 0..back.pages.len() {
             let disp = back.render(k).unwrap();
             assert!(disp.skipped.is_empty(), "{name} page {}: {:?}", k + 1, disp.skipped);

@@ -34,10 +34,9 @@ Tested on 43 public DocuWorks files (generation 7 and 10, `.xdw` and `.xbd`):
 The format findings, including the check value DocuWorks verifies and the
 driver's private drawing records, are in [docs/spec/XDW-FORMAT.md](docs/spec/XDW-FORMAT.md).
 
-Not yet: signatures / passwords, text selection in pages, see-through picture
-annotations. Date stamps and sticky notes are drawn and open in Viewer Light;
-the settings DocuWorks Desk itself writes for them are not confirmed (no Desk
-to test with). See the [plan](docs/PLAN.ko.md).
+Not yet: signatures / passwords (signed documents open; editing voids the
+signature, and the editor says so), text selection in pages, see-through
+picture annotations. See the [plan](docs/PLAN.ko.md).
 
 ## Editor
 
@@ -50,13 +49,15 @@ Delete, arrows (Shift = 1 cm), Ctrl+Z / Ctrl+Y, Ctrl+S, Ctrl+Shift+S (save as
 PDF / text), Ctrl+P. Drop a PDF or a picture on an open document to insert it
 as pages.
 
-## Checked against the real viewer
+## Checked against the real DocuWorks
 
 `tools/dwview` runs FUJIFILM's free DocuWorks Viewer Light under Wine and reports
-whether a file opens, with a screenshot. It was used to find the format rules
-(each marked [viewer] in the spec) and to check saved files:
-see [experiments/results.md](experiments/results.md). Full DocuWorks (Desk) has not
-been tested yet.
+whether a file opens, with a screenshot. `tools/dwapi` calls the API of
+DocuWorks 10 itself (installed from the trial) so that DocuWorks reads our saved
+files — pages, annotations and their settings — and draws their pages. Every
+saved test file matches and draws (38 public samples + 5 DocuWorks 10 samples,
+all editing features); DocuWorks Desk lists them with their pages. See
+[experiments/results.md](experiments/results.md).
 
 ## Layout
 
