@@ -101,7 +101,7 @@ pub enum Item {
         image: u32,
         m: [f32; 6],
         clip: u32,
-        /// Opacity 0–1.
+        /// Opacity 0-1.
         alpha: f32,
     },
 }

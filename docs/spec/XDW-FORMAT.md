@@ -1,6 +1,6 @@
-# DocuWorks document format (`.xdw`, `.xbd`) — working specification
+# DocuWorks document format (`.xdw`, `.xbd`): working specification
 
-Status: reverse-engineered from 43 public files (DocuWorks 7 – 9 era, generation
+Status: reverse-engineered from 43 public files (DocuWorks 7 to 9 era, generation
 7 and 10 headers) and checked against **DocuWorks Viewer Light 10** (Fuji Xerox /
 FUJIFILM), which we drive automatically through Wine (`tools/dwview`). Every
 statement marked **[viewer]** was tested by writing a file and opening it in the
@@ -12,16 +12,16 @@ of page geometry.
 
 ## 1. Elements
 
-The whole file is made of tag–length–value elements:
+The whole file is made of tag-length-value elements:
 
 ```
 tag      1 byte  (0x60 header, 0x61 segment, 0x63 properties, 0x64 entry, 0x65/0x68 trailer, 0x8n fields)
 length   < 0x80: the length itself
-         0x80|k: k big-endian bytes follow (k = 1–4)
+         0x80|k: k big-endian bytes follow (k = 1-4)
 value
 ```
 
-DocuWorks writes lengths `0x80`–`0xFE` as `81 nn` and **from `0xFF` on in the
+DocuWorks writes lengths `0x80`-`0xFE` as `81 nn` and **from `0xFF` on in the
 two-byte form** (`82 00 ff`), even where one byte would do [corpus]. Writing
 them the same way keeps saved files byte-identical where nothing changed.
 
@@ -71,9 +71,9 @@ check(block) = XOR of every whole 4-byte little-endian word of the block
                (bytes after the last whole word are not counted)
 ```
 
-- trailer 0x85 = check(stored properties block) — **the viewer refuses the file
+- trailer 0x85 = check(stored properties block). **The viewer refuses the file
   ("The file is not a DocuWorks document file.") when it is wrong** [viewer]
-- entry 0x81 = check(the entry's 0x82 body value) — not checked when opening
+- entry 0x81 = check(the entry's 0x82 body value). Not checked when opening
   [viewer], but holds in every sample [corpus]
 
 ## 3. Entries (0x64)
@@ -153,15 +153,15 @@ attributes whose name ends in `(w`).
 | 8010 | page content |
 | 8011 | text annotation |
 | 801a | sticky note (付箋); also the kind of the placements inside it |
-| 801b | marker — not in the samples |
+| 801b | marker (not in the samples) |
 | 802e | page form (header / footer) |
 | 8033 | date stamp (日付印) |
 | 803c | line |
 | 803d | rectangle |
 | 803e | ellipse |
 | 803f | picture annotation |
-| 8040 | received stamp — not in the samples |
-| 8042 | polygon — not in the samples |
+| 8040 | received stamp (not in the samples) |
+| 8042 | polygon (not in the samples) |
 | 8045 | custom annotation (shapes of newer versions: polygon points in `%annotation_customdata`) |
 | 800f | embedded OLE object |
 | c02f | link |
@@ -305,8 +305,8 @@ DWa             a picture stored in the record: offsets (from the record start)
                 to a BITMAPINFO and bits, as in STRETCHDIBITS
 DWb             the next picture of the page's picture list (attribute 301…)
 DWc             draw the current picture: bounds, xDest, yDest, xSrc, ySrc,
-                cxSrc, cySrc, usage, rop, cxDest, cyDest (i32) — STRETCHDIBITS
-                without the offsets
+                cxSrc, cySrc, usage, rop, cxDest, cyDest (i32), as in
+                STRETCHDIBITS without the offsets
 ```
 
 `R2_MASKPEN` (SETROP2 9) works as a highlighter: the colour multiplies with

@@ -11,8 +11,8 @@ writing test files and opening them in the free DocuWorks Viewer Light.
 No DocuWorks software or SDK is used or shipped.
 
 Reference only (no code copied):
-  - xdw-salvage (The Unlicense) — read for comparison while checking findings.
-  - xdwlib (Apache-2.0) — documents the DocuWorks API names.
+  - xdw-salvage (The Unlicense): read for comparison while checking findings.
+  - xdwlib (Apache-2.0): documents the DocuWorks API names.
 
 Libraries
   - encoding_rs (MIT/Apache-2.0), serde / serde_json (MIT/Apache-2.0),

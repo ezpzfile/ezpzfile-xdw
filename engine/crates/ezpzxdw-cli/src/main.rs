@@ -1,11 +1,11 @@
-//! `ezpzxdw` — inspect DocuWorks files.
+//! `ezpzxdw`: inspect DocuWorks files.
 
 use ezpzxdw_core::container::{Body, Container};
 use ezpzxdw_core::{props, tlv};
 use std::io::Write;
 use std::process::ExitCode;
 
-const HELP: &str = r#"ezpzxdw — DocuWorks (.xdw) reader
+const HELP: &str = r#"ezpzxdw: DocuWorks (.xdw) reader
 
 USAGE:
   ezpzxdw info   <file>            segments, trailer, entries

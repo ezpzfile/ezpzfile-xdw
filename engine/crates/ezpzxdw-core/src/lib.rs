@@ -1,4 +1,4 @@
-//! EZPZ File XDW — reader and writer for DocuWorks (`.xdw`) documents.
+//! EZPZ File XDW: reader and writer for DocuWorks (`.xdw`) documents.
 //!
 //! Independent implementation from public samples. See `docs/spec/XDW-FORMAT.md`.
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>XDW エディタ — EZPZ File</title>
+<title>XDW エディタ | EZPZ File</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 
@@ -158,6 +158,7 @@ dialog .opts label:hover { background: var(--ink-50); }
 dialog .opts label:has(input:disabled) { color: var(--ink-300); background: none; }
 dialog .opts input { accent-color: var(--brand-500); }
 dialog .muted { color: var(--ink-500); font-size: 12px; }
+dialog .muted.sub { display: block; margin-top: 2px; }
 dialog table { border-collapse: collapse; font-size: 13px; }
 dialog td { padding: 5px 14px 5px 0; vertical-align: top; }
 dialog td:first-child { color: var(--ink-500); white-space: nowrap; }
@@ -290,9 +291,9 @@ dialog td:first-child { color: var(--ink-500); white-space: nowrap; }
   <div class="body">
     <label class="flabel">ファイル名 <input class="field" id="save-name"></label>
     <div class="opts">
-      <label><input type="radio" name="fmt" value="xdw" checked> <span><span id="fmt-xdw-label">DocuWorks 文書 (.xdw)</span> <span class="muted">— DocuWorks でそのまま開けます</span></span></label>
-      <label><input type="radio" name="fmt" value="pdf"> <span>PDF (.pdf) <span class="muted">— 画面と同じ見た目。文字の検索・コピーもできます</span></span></label>
-      <label><input type="radio" name="fmt" value="txt"> <span>テキスト (.txt) <span class="muted">— 文書の文字だけ</span></span></label>
+      <label><input type="radio" name="fmt" value="xdw" checked> <span><span id="fmt-xdw-label">DocuWorks 文書 (.xdw)</span> <span class="muted sub">DocuWorks でそのまま開けます</span></span></label>
+      <label><input type="radio" name="fmt" value="pdf"> <span>PDF (.pdf) <span class="muted sub">画面と同じ見た目。文字の検索・コピーもできます</span></span></label>
+      <label><input type="radio" name="fmt" value="txt"> <span>テキスト (.txt) <span class="muted sub">文書の文字だけ</span></span></label>
     </div>
   </div>
   <footer><button class="pbtn" value="cancel">キャンセル</button><button class="pbtn primary" value="ok">保存</button></footer>

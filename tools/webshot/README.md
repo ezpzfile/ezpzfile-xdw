@@ -1,4 +1,4 @@
-# webshot — our editor, headless
+# webshot: our editor, headless
 
     node shot.js web/dist/ezpzxdw-editor.html FILE.xdw OUT.png [page]
     node edit-test.js web/dist/ezpzxdw-editor.html FILE.xdw OUTDIR    # scripted editing session + saves

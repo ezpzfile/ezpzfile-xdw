@@ -131,7 +131,7 @@ impl Emf {
     }
 
     /// A see-through coloured rectangle (ALPHABLEND of a one-pixel picture
-    /// with a constant opacity 0–255).
+    /// with a constant opacity 0-255).
     pub fn alpha_rect(&mut self, l: i32, t: i32, r: i32, b: i32, rgb: u32, alpha: u8) {
         let mut p = Vec::new();
         let put = |p: &mut Vec<u8>, v: i32| p.extend_from_slice(&v.to_le_bytes());

@@ -1291,7 +1291,7 @@ function updateChrome() {
   const dirty = !!(S.ed && S.ed.dirty());
   $("#topbar").classList.toggle("modified", dirty);
   $("#docname").textContent = S.ed ? S.name + S.ext : "文書を開いてください";
-  document.title = (S.ed ? (dirty ? "● " : "") + S.name + " — " : "") + "XDW エディタ — EZPZ File";
+  document.title = (S.ed ? (dirty ? "● " : "") + S.name + " | " : "") + "XDW エディタ | EZPZ File";
   const u = $("#tb-undo"), r = $("#tb-redo");
   if (u) u.disabled = !(S.ed && S.ed.canUndo());
   if (r) r.disabled = !(S.ed && S.ed.canRedo());

@@ -1,4 +1,4 @@
-//! The tag–length–value elements every part of a `.xdw` is made of.
+//! The tag-length-value elements every part of a `.xdw` is made of.
 //!
 //! One tag byte, then a length in the short form (`< 0x80`: the length
 //! itself) or the long form (`0x80 | k`, then `k` big-endian bytes), then the

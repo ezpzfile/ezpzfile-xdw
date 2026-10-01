@@ -1,85 +1,80 @@
 # EZPZ File XDW
 
-**Open, annotate and save DocuWorks (`.xdw`) documents anywhere — Mac, Linux, phone, browser.**
-An open-source engine, editor and format specification for FUJIFILM (Fuji Xerox)
-DocuWorks files, built from scratch.
+**日本語** · [English](README.en.md) · [한국어](README.ko.md)
 
-> DocuWorks の `.xdw` ファイルを、Mac・Linux・スマホ・ブラウザで開いて、注釈を書き込み、
-> そのまま `.xdw` で保存できるオープンソースです。ファイル形式の解析結果（仕様書）も公開しています。
-> ファイルは端末の外に送信されません。
+**DocuWorks（`.xdw`）文書を、Mac・Linux・スマホ・ブラウザで開いて、アノテーションを付けて、そのまま保存。**
+富士フイルム（旧富士ゼロックス）DocuWorks のファイルを扱うための、ゼロから作ったオープンソースの
+エンジン・エディタ・ファイル形式仕様書です。ファイルは端末の外に送信されません。
 
-Status: **v0.2 — viewer + editor that saves back to `.xdw` / `.xbd` (developer preview).**
-Not affiliated with FUJIFILM Business Innovation.
+状態: **v0.2。`.xdw` / `.xbd` に保存し直せるビューア + エディタ（開発者向けプレビュー）。**
+富士フイルムビジネスイノベーション株式会社とは関係ありません。
 
-## What works
+## できること
 
-Tested on 43 public DocuWorks files (generation 7 and 10, `.xdw` and `.xbd`):
+インターネットで公開されている DocuWorks ファイル 43 件（第 7・第 10 世代、`.xdw` と `.xbd`）で確認しています。
 
-- all 43 open, every page draws with no unknown drawing records
-- pages: EMF and WMF drawings, the DocuWorks driver's own compact path and
-  picture records, JPEG picture strips, scanned/rotated pages, annotations
-- **saving back to `.xdw`**, the way DocuWorks itself saves (one segment appended,
-  nothing earlier rewritten) — saved files open in **DocuWorks Viewer Light**
-- annotations: add **text, sticky note (付箋), date stamp (日付印), highlighter,
-  rectangle, ellipse, line, picture**; move, resize, change, delete (existing
-  annotations from DocuWorks too: move / delete)
-- pages: turn left / right, delete, reorder (drag in the page list);
-  **insert** a blank page, pictures (JPEG / PNG / …), pages of another `.xdw` /
-  `.xbd`, or PDF pages (as pictures; needs the network once for pdf.js)
-- **binders (`.xbd`)**: documents shown in the page list; add `.xdw` files,
-  rename, reorder, remove documents
-- export: **PDF** (looks like the screen, text searchable/copyable), plain text; print
-- undo / redo
+- 43 件すべてが開き、どのページも未知の描画レコードなしで描ける
+- ページ: EMF・WMF の図形、DocuWorks ドライバ独自の圧縮パス・画像レコード、JPEG の画像断片、
+  スキャン・回転ページ、アノテーション
+- **`.xdw` への保存**: DocuWorks 自身と同じ方式（末尾に 1 セグメントを追加し、それより前は書き換えない）。
+  保存したファイルは **DocuWorks Viewer Light** で開ける
+- アノテーション: **テキスト、付箋、日付印、蛍光ペン、四角形、楕円、直線、画像** の追加。移動・サイズ変更・
+  内容の変更・削除（DocuWorks で付けた既存のアノテーションも移動・削除できる）
+- ページ: 左右に回転、削除、並べ替え（ページ一覧でドラッグ）。白紙ページ、画像（JPEG / PNG など）、
+  別の `.xdw` / `.xbd` のページ、PDF のページ（画像として。pdf.js のために最初の 1 回だけネット接続が必要）の **挿入**
+- **バインダー（`.xbd`）**: ページ一覧に文書ごとに表示。`.xdw` の追加、名前の変更、並べ替え、取り外し
+- 書き出し: **PDF**（画面と同じ見た目、文字の検索・コピー可）、テキスト。印刷
+- 元に戻す / やり直し
 
-The format findings, including the check value DocuWorks verifies and the
-driver's private drawing records, are in [docs/spec/XDW-FORMAT.md](docs/spec/XDW-FORMAT.md).
+ファイル形式の解析結果（DocuWorks が確認する検査値、ドライバ独自の描画レコードなど）は
+[docs/spec/XDW-FORMAT.md](docs/spec/XDW-FORMAT.md)（英語）にあります。
 
-Not yet: signatures / passwords (signed documents open; editing voids the
-signature, and the editor says so), text selection in pages, see-through
-picture annotations. See the [plan](docs/PLAN.ko.md).
+まだできないこと: 署名・パスワード（署名された文書は開けるが、編集すると署名が無効になるため、エディタが
+その旨を表示する）、ページ内の文字の選択、透過する画像アノテーション。詳しくは [計画](docs/PLAN.ja.md)
+（[English](docs/PLAN.en.md)、[한국어](docs/PLAN.ko.md)）を参照。
 
-## Editor
+## エディタ
 
-`web/dist/ezpzxdw-editor.html` is the whole editor in one file: double-click it,
-drop a `.xdw` on the window, annotate, and save (Ctrl+S → `.xdw`). The screen
-follows DocuWorks Viewer (page list on the left, annotation tools on top,
-properties on the right) in the EZPZ File design. Keys: T text, S sticky note,
-D date stamp, H highlighter, R rectangle, E ellipse, L line, Esc select,
-Delete, arrows (Shift = 1 cm), Ctrl+Z / Ctrl+Y, Ctrl+S, Ctrl+Shift+S (save as
-PDF / text), Ctrl+P. Drop a PDF or a picture on an open document to insert it
-as pages.
+`web/dist/ezpzxdw-editor.html` は 1 ファイルで完結したエディタです。ダブルクリックで開き、`.xdw` を
+ウィンドウにドロップして、アノテーションを付けて保存します（Ctrl+S → `.xdw`）。画面は DocuWorks Viewer に
+合わせ（左にページ一覧、上にアノテーションの道具、右にプロパティ）、見た目は EZPZ File のデザインです。
 
-## Checked against the real DocuWorks
+キー: T テキスト、S 付箋、D 日付印、H 蛍光ペン、R 四角形、E 楕円、L 直線、Esc 選択、Delete 削除、
+矢印（Shift で 1 cm）、Ctrl+Z / Ctrl+Y、Ctrl+S、Ctrl+Shift+S（PDF・テキストで保存）、Ctrl+P。
+開いている文書に PDF や画像をドロップすると、ページとして挿入されます。
 
-`tools/dwview` runs FUJIFILM's free DocuWorks Viewer Light under Wine and reports
-whether a file opens, with a screenshot. `tools/dwapi` calls the API of
-DocuWorks 10 itself (installed from the trial) so that DocuWorks reads our saved
-files — pages, annotations and their settings — and draws their pages. Every
-saved test file matches and draws (38 public samples + 5 DocuWorks 10 samples,
-all editing features); DocuWorks Desk lists them with their pages. See
-[experiments/results.md](experiments/results.md).
+## 本物の DocuWorks で確認
 
-## Layout
+`tools/dwview` は富士フイルムの無料ビューア DocuWorks Viewer Light を Wine で動かし、ファイルが開けるかを
+画面写真つきで報告します。`tools/dwapi` は DocuWorks 10 本体（体験版をインストール）の API を呼び出し、
+保存したファイルを DocuWorks 自身に読ませて（ページ、アノテーションとその設定）、ページを描かせます。
+テスト用に保存したファイルはすべて一致し、描画にも成功しました（公開サンプル 38 件 + DocuWorks 10 のサンプル
+5 件、すべての編集機能）。DocuWorks Desk の一覧にもページつきで表示されます。
+結果は [experiments/results.md](experiments/results.md)（韓国語）にあります。
+
+## 構成
 
 ```
-engine/crates/ezpzxdw-core   reader, renderer (EMF/WMF/DW → display list), editor, writer, PDF
-engine/crates/ezpzxdw-cli    `ezpzxdw` command: info, tree, pages, render, text, edit, check …
-engine/crates/ezpzxdw-wasm   browser bindings
-web/                       the editor (build: web/build.sh → web/dist/ezpzxdw-editor.html)
-docs/spec/XDW-FORMAT.md    the format
-tools/dwview               DocuWorks Viewer Light as a referee (Wine)
-tools/webshot              the editor driven headless (Playwright)
-corpus/manifest.tsv        where the public sample files come from (files not included)
+engine/crates/ezpzxdw-core   読み込み、描画（EMF/WMF/DW → 表示リスト）、編集、保存、PDF
+engine/crates/ezpzxdw-cli    `ezpzxdw` コマンド: info, tree, pages, render, text, edit, check …
+engine/crates/ezpzxdw-wasm   ブラウザ用バインディング
+web/                       エディタ（ビルド: web/build.sh → web/dist/ezpzxdw-editor.html）
+docs/spec/XDW-FORMAT.md    ファイル形式（英語）
+docs/PLAN.{ja,en,ko}.md    計画と進捗（日本語、English、한국어）
+tools/dwview               DocuWorks Viewer Light を審判にする（Wine）
+tools/dwapi                DocuWorks 10 本体を API 経由で審判にする（Wine）
+tools/webshot              ブラウザなしでエディタを操作する（Playwright）
+corpus/manifest.tsv        公開サンプルファイルの入手先（ファイル自体は含まない）
 ```
 
-## Build
+## ビルド
 
 ```
-cd engine && cargo test                       # + EZPZXDW_CORPUS=/path/to/samples for the corpus tests
+cd engine && cargo test                       # コーパスのテストは EZPZXDW_CORPUS=/path/to/samples を付ける
 cargo run -p ezpzxdw-cli -- pages file.xdw
-web/build.sh                                  # needs wasm32 target and wasm-bindgen-cli 0.2.129
+web/build.sh                                  # wasm32 ターゲットと wasm-bindgen-cli 0.2.129 が必要
 ```
 
-## Licence
+## ライセンス
 
-MIT OR Apache-2.0. See [NOTICE](NOTICE) for trademarks and third-party assets.
+MIT または Apache-2.0。商標とサードパーティの素材については [NOTICE](NOTICE) を参照してください。

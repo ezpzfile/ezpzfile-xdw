@@ -1,4 +1,4 @@
-# dwapi — DocuWorks itself as a referee
+# dwapi: DocuWorks itself as a referee
 
 `dwapi.c` is a small Windows program that calls the DocuWorks API
 (`xdwapi.dll`, installed with DocuWorks Desk) under Wine. It lets the real

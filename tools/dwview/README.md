@@ -1,4 +1,4 @@
-# dwview — DocuWorks Viewer Light as a referee
+# dwview: DocuWorks Viewer Light as a referee
 
 Opens a `.xdw` in the real **DocuWorks Viewer Light** (free, from FUJIFILM)
 running under Wine on a virtual display, and reports what happened:
