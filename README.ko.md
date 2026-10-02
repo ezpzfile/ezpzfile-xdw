@@ -89,10 +89,7 @@ web/build.sh                                  # wasm32 타깃과 wasm-bindgen-cl
 
 ## 라이선스
 
-[EZPZ File License](LICENSE): MIT 라이선스에 출처 표시 조건 하나를 더한 것입니다. 쓰기·고치기·다시 배포·상업적 이용 모두
-자유입니다. 조건은 하나입니다. 이 소프트웨어(또는 이것을 바탕으로 만든 것)를 쓰는 제품·사이트·서비스는 사용자가 볼 수 있는
-곳 어딘가 한 군데(정보 화면, 크레딧, 푸터, 도움말 등)에 EZPZ File과 사이트 주소를 표시해 주세요.
-
-    Powered by EZPZ File (https://ezpzfile.com)
-
-커밋 9ceab2e까지 공개한 판은 MIT 또는 Apache-2.0 그대로입니다. 상표와 외부 자료는 [NOTICE](NOTICE)를 보세요.
+MIT 라이선스([LICENSE](LICENSE)). 쓰기·고치기·다시 배포·상업적 이용 모두 자유입니다. 복사본이나 고친 판에는
+저작권 표시 "Copyright (c) 2026 EZPZ File (https://ezpzfile.com)" 한 줄과 라이선스 글을 그대로 남겨 주세요.
+서비스나 제품에 쓸 때 어딘가에 "Powered by EZPZ File"라고 표시해 주시면 고맙겠습니다(선택).
+상표와 외부 자료는 [NOTICE](NOTICE)를 보세요.

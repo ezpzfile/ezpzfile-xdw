@@ -98,12 +98,7 @@ web/build.sh                                  # needs wasm32 target and wasm-bin
 
 ## License
 
-[EZPZ File License](LICENSE): the MIT License with one added condition, attribution. You may use, change,
-share and sell it freely. A product, website or service that uses this software (or a work based on it) must
-show, in at least one place its users can see (an About or credits page, a footer, help), a credit naming
-EZPZ File with its website address:
-
-    Powered by EZPZ File (https://ezpzfile.com)
-
-Versions published up to commit 9ceab2e were released under MIT OR Apache-2.0 and stay under those terms.
+MIT License ([LICENSE](LICENSE)). You may use, change, share and sell it freely. Keep the copyright notice
+"Copyright (c) 2026 EZPZ File (https://ezpzfile.com)" and the licence text in copies and changed versions.
+If you use it in a service or product, a "Powered by EZPZ File" credit somewhere would be appreciated (optional).
 See [NOTICE](NOTICE) for trademarks and third-party assets.
