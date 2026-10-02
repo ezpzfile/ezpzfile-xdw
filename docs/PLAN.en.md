@@ -41,22 +41,33 @@ against the real viewer**.
 |---|---|
 | 付箋 (sticky note) | Done. A real DocuWorks 付箋 (0x801a) with a text box inside, built the same way as DocuWorks 10 |
 | 日付印 (date stamp) | Done. Top text, date and bottom text in a red circle, using the same settings DocuWorks 10 writes (`STAMPATT_…`) |
-| Picture annotation (画像を貼る) | Done. Note: DocuWorks draws white areas as opaque, so they hide the text underneath |
+| Picture annotation (画像を貼る) | Done. DocuWorks draws the white areas of its picture annotation as opaque, so they hide the text underneath (see-through pictures: v0.3) |
 | Insert page: blank | Done |
 | Insert page: photo (JPG, PNG and others) | Done. Stored the way DocuWorks stores scanned pages (JPEG + DWb/DWc) |
 | Insert page: pages from another .xdw/.xbd | Done. Data the page uses (drawings, photos, thumbnails) is copied with it |
 | Insert page: PDF | Done. PDF pages go in as pictures (pdf.js is downloaded once, the first time) |
 | Editing binders (.xbd) | Done. The page list groups pages by document; add, rename, reorder and remove documents |
-| Checked in full DocuWorks 10 | Done. With the trial installed, the DocuWorks API opens and draws all 43 saved files, and Desk lists them |
+| Checked in full DocuWorks 10 | Done. With the latest version, the DocuWorks API opens and draws all 43 saved files, and Desk lists them |
 | DocuWorks 10 scan and photo pages (drawing kind 5) | Done (new finding) |
 | Signed documents | On opening, a notice says editing will invalidate the signature; the signature itself cannot be moved or deleted |
 
+## v0.3 (2026-10-02): selecting and searching text, see-through pictures
+
+| Item | Status |
+|---|---|
+| Selecting and copying text in pages | Done. An invisible text layer lies over the drawn text. Ctrl+A selects all text on the page |
+| Searching the document (Ctrl+F) | Done. Ignores full-width / half-width and case differences, and selects what it finds |
+| See-through pictures | Done. The white parts show the text underneath. DocuWorks has no see-through picture annotation, so the picture is kept the way a metafile pasted from the clipboard is kept (an OLE Enhanced Metafile) whose drawing multiplies the picture with the page. It looks the same in DocuWorks 10, which can also move and resize it (spec 5.5) |
+| Opaque pictures | DocuWorks' picture annotation, as before. The properties panel switches a picture between the two. A picture with transparent parts (a PNG, say) goes in see-through |
+| Resizing pictures | Done (drag a corner) |
+
 ## Next
 
-1. **Selecting and searching text in the document**, using the positions in the text records.
-2. Extracting **attached original files (1306)**.
-3. Creating new binders (for now, only existing binders can be edited).
-4. The remaining annotation kinds such as markers and polygons (samples can be made with the
+1. **Passwords**: make protected samples with the DocuWorks API, work out the scheme, and let someone who knows the password open the file.
+2. **Signatures**: first show the signature information (who signed, when, whether it still holds). Adding new signatures comes later.
+3. Extracting **attached original files (1306)**.
+4. Creating new binders (for now, only existing binders can be edited).
+5. The remaining annotation kinds such as markers and polygons (samples can be made with the
    DocuWorks API to match against).
 
 ## How it is checked

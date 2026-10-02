@@ -20,7 +20,9 @@ Tested on 43 public DocuWorks files (generation 7 and 10, `.xdw` and `.xbd`):
   nothing earlier rewritten). Saved files open in **DocuWorks Viewer Light**
 - annotations: add **text, sticky note (付箋), date stamp (日付印), highlighter,
   rectangle, ellipse, line, picture**; move, resize, change, delete (existing
-  annotations from DocuWorks too: move / delete)
+  annotations from DocuWorks too: move / delete). A picture can be
+  **see-through**: its white parts show the text underneath, in DocuWorks too
+- **select and copy text** in pages, **search** the document (Ctrl+F)
 - pages: turn left / right, delete, reorder (drag in the page list);
   **insert** a blank page, pictures (JPEG / PNG / …), pages of another `.xdw` /
   `.xbd`, or PDF pages (as pictures; needs the network once for pdf.js)
@@ -33,8 +35,7 @@ The format findings, including the check value DocuWorks verifies and the
 driver's private drawing records, are in [docs/spec/XDW-FORMAT.md](docs/spec/XDW-FORMAT.md).
 
 Not yet: signatures / passwords (signed documents open; editing voids the
-signature, and the editor says so), text selection in pages, see-through
-picture annotations. See the [plan](docs/PLAN.en.md)
+signature, and the editor says so). See the [plan](docs/PLAN.en.md)
 ([日本語](docs/PLAN.ja.md), [한국어](docs/PLAN.ko.md)).
 
 ## Editor
@@ -45,14 +46,14 @@ follows DocuWorks Viewer (page list on the left, annotation tools on top,
 properties on the right) in the EZPZ File design. Keys: T text, S sticky note,
 D date stamp, H highlighter, R rectangle, E ellipse, L line, Esc select,
 Delete, arrows (Shift = 1 cm), Ctrl+Z / Ctrl+Y, Ctrl+S, Ctrl+Shift+S (save as
-PDF / text), Ctrl+P. Drop a PDF or a picture on an open document to insert it
+PDF / text), Ctrl+P, Ctrl+F (search). Drop a PDF or a picture on an open document to insert it
 as pages.
 
 ## Checked against the real DocuWorks
 
 `tools/dwview` runs FUJIFILM's free DocuWorks Viewer Light under Wine and reports
 whether a file opens, with a screenshot. `tools/dwapi` calls the API of
-DocuWorks 10 itself (installed from the trial) so that DocuWorks reads our saved
+the latest DocuWorks 10 itself so that DocuWorks reads our saved
 files (pages, annotations and their settings) and draws their pages. Every
 saved test file matches and draws (38 public samples + 5 DocuWorks 10 samples,
 all editing features); DocuWorks Desk lists them with their pages. See

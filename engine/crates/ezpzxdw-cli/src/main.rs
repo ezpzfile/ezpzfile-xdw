@@ -336,7 +336,12 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                                 }
                             }
                         }
-                        d.add_picture(page, g("x"), g("y"), g("w"), g("h"), &px, pw, ph)?;
+                        let see = op.get("see_through").and_then(|v| v.as_bool()).unwrap_or(false);
+                        d.add_picture(page, g("x"), g("y"), g("w"), g("h"), &px, pw, ph, see)?;
+                    }
+                    "set_picture" => {
+                        let see = op.get("see_through").and_then(|v| v.as_bool()).unwrap_or(false);
+                        d.set_picture(page, g("obj") as usize, g("x"), g("y"), g("w"), g("h"), see)?;
                     }
                     "blank_page" => {
                         d.insert_blank_page(g("at") as usize, op.get("w").and_then(|v| v.as_f64()).unwrap_or(21000.0), op.get("h").and_then(|v| v.as_f64()).unwrap_or(29700.0))?;

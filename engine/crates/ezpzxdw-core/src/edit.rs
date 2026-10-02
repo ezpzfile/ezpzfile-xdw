@@ -699,41 +699,125 @@ impl Document {
         Ok(())
     }
 
-    /// Add a picture annotation (DocuWorks "bitmap" annotation, kind
-    /// 0x803f): `rgba` is `pw` × `ph` pixels, top row first; it is placed
-    /// at (x, y) with size w × h (1/100 mm). Transparent pixels become white.
-    pub fn add_picture(&mut self, page: usize, x: f64, y: f64, w: f64, h: f64, rgba: &[u8], pw: u32, ph: u32) -> Result<usize> {
+    /// Add a picture annotation: `rgba` is `pw` × `ph` pixels, top row
+    /// first, placed at (x, y) with size w × h (1/100 mm). Transparent
+    /// pixels become white. With `see_through` the white parts show the page
+    /// (an embedded OLE picture, see `doc::PICTURE_MARK`); without, it is
+    /// DocuWorks' bitmap annotation (803f), which DocuWorks shows opaque.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_picture(&mut self, page: usize, x: f64, y: f64, w: f64, h: f64, rgba: &[u8], pw: u32, ph: u32, see_through: bool) -> Result<usize> {
         if pw == 0 || ph == 0 || rgba.len() < (pw * ph * 4) as usize {
             return Err(Error::Unsupported("picture size does not match its pixels".into()));
         }
-        let raw = dib_24(rgba, pw, ph);
-        let dib = crate::dib::encode_stored(&raw[..40], &raw[40..], ph);
-        let mut body = element(0x80, &[7]);
-        body.extend(element(0x81, &[40]));
-        body.extend(element(0x84, &tlv::uint_bytes(w.round() as u64)));
-        body.extend(element(0x85, &tlv::uint_bytes(h.round() as u64)));
-        body.extend(element(0x89, &tlv::uint_bytes(dib.len() as u64)));
-        body.extend(element(0x86, &dib));
         let id = self.next_id(page)?;
-        let (_, reference) = self.add_entry(body, false);
         let pr = self.page(page)?.record;
         let d = self.records[pr].depth;
         let at = subtree_end(&self.records, pr);
-        let obj = Record {
-            depth: d + 2,
-            kind: props::num_bytes(doc::K_PICTURE),
-            attrs: vec![
-                int_attr(57, &[1]),
-                int_attr(5, &[w.round() as i64, h.round() as i64]),
-                int_attr(61, &[0]),
-                Attr { class: 0xc0, tag: 7, value: reference },
-                int_attr(3, &[id]),
-            ],
-        };
+        let obj = self.picture_record(d + 2, id, w, h, 0, &dib_24(rgba, pw, ph), see_through);
         self.records.insert(at, place_record(d + 1, x, y, w, h));
         self.records.insert(at + 1, obj);
         self.refresh();
         Ok(self.page(page)?.objects.len() - 1)
+    }
+
+    /// Redo a picture annotation at (x, y), size w × h, see-through or
+    /// not: for resizing, and for switching between the two kinds. Its
+    /// pixels are read back from the file.
+    #[allow(clippy::too_many_arguments)]
+    pub fn set_picture(&mut self, page: usize, obj: usize, x: f64, y: f64, w: f64, h: f64, see_through: bool) -> Result<()> {
+        let o = self.object(page, obj)?;
+        let img = self.picture_image(&o).ok_or_else(|| Error::Unsupported("this picture cannot be read back".into()))?;
+        let crate::gfx::ImageData::Rgba(px) = &img.data else {
+            return Err(Error::Unsupported("a JPEG picture cannot be changed here".into()));
+        };
+        let raw = dib_24(px, img.w, img.h);
+        let r = &self.records[o.record];
+        let (id, d, rot) = (r.int(3).unwrap_or(1), r.depth, r.int(61).unwrap_or(0).rem_euclid(360));
+        let end = subtree_end(&self.records, o.place);
+        let rec = self.picture_record(d, id, w.max(1.0), h.max(1.0), rot, &raw, see_through);
+        self.records.splice(o.place..end, [place_record(d - 1, x, y, w.max(1.0), h.max(1.0)), rec]);
+        self.refresh();
+        Ok(())
+    }
+
+    /// Is `obj` a picture, and is it see-through? `None`: not a picture.
+    pub fn picture_see_through(&self, page: usize, obj: usize) -> Option<bool> {
+        let o = self.object(page, obj).ok()?;
+        (o.kind_name == "picture").then_some(o.kind == doc::K_OLE)
+    }
+
+    /// The object record of a picture from a 24-bit DIB (`raw` =
+    /// BITMAPINFOHEADER + bits). `w` × `h` is the box on the page; `rot`
+    /// (0, 90, 180, 270) is the turn page rotation gave it: the drawing is
+    /// made for the box before the turn, like rotate_page leaves it.
+    #[allow(clippy::too_many_arguments)]
+    fn picture_record(&mut self, depth: u8, id: i64, w: f64, h: f64, rot: i64, raw: &[u8], see_through: bool) -> Record {
+        let (bw, bh) = if rot == 90 || rot == 270 { (h, w) } else { (w, h) };
+        let pw = u32::from_le_bytes([raw[4], raw[5], raw[6], raw[7]]);
+        let ph = u32::from_le_bytes([raw[8], raw[9], raw[10], raw[11]]);
+        let size = [w.round() as i64, h.round() as i64];
+        if see_through {
+            // one STRETCHDIBITS with SRCAND: the picture multiplies the page.
+            // Kept as an embedded OLE picture (Enhanced Metafile), which
+            // DocuWorks moves and sizes by its stored drawing.
+            let (uw, uh) = (emfw::units(bw), emfw::units(bh));
+            let mut e = Emf::new(uw, uh);
+            e.stretch_mode(4);
+            e.stretch_dib([0, 0, uw, uh], pw as i32, ph as i32, &raw[..40], &raw[40..], 0x0088_00C6);
+            let emf = e.finish(bw, bh);
+            let (_, draw_ref) = self.add_entry(drawing_attr(&emf, bw, bh).value, false);
+            let file = ole_picture_file(&emf);
+            let stored = lzh::compress(&file);
+            let stored_len = stored.len();
+            let (n, _) = self.add_entry(stored, true);
+            let mut attrs = vec![
+                int_attr(57, &[1]),
+                int_attr(55, &[1]),
+                int_attr(56, &[1]),
+                defs_attr(&[
+                    (2001, 4, "%OLE_CONTENT_FILE"),
+                    (2002, 107, "%OLE_SIZES"),
+                    (2003, 4, "%OLE_SERVER_NAME"),
+                    (2004, 4, "%OLE_CLSID"),
+                    (2005, 2, "%OLE_DWASPECT"),
+                    (2006, 2, "%OLE_ITEMTYPE"),
+                    (2007, 2, doc::PICTURE_MARK),
+                ]),
+                int_attr(2002, &[bw.round() as i64, bh.round() as i64]),
+                named(2003, sjisz(OLE_EMF_NAME)),
+                named(2004, CLSID_PICTURE_EMF.to_vec()),
+                int_attr(2005, &[1]),
+                int_attr(2006, &[3]),
+                int_attr(2007, &[1]),
+            ];
+            if rot != 0 {
+                attrs.push(int_attr(61, &[rot]));
+            }
+            attrs.push(int_attr(3, &[id]));
+            attrs.push(int_attr(5, &size));
+            attrs.push(Attr { class: 0xc0, tag: 7, value: draw_ref });
+            attrs.push(Attr { class: 0xc0, tag: 2001, value: write::packed_ref(n, file.len(), stored_len) });
+            return Record { depth, kind: props::num_bytes(doc::K_OLE), attrs };
+        }
+        let dib = crate::dib::encode_stored(&raw[..40], &raw[40..], ph);
+        let mut body = element(0x80, &[7]);
+        body.extend(element(0x81, &[40]));
+        body.extend(element(0x84, &tlv::uint_bytes(bw.round() as u64)));
+        body.extend(element(0x85, &tlv::uint_bytes(bh.round() as u64)));
+        body.extend(element(0x89, &tlv::uint_bytes(dib.len() as u64)));
+        body.extend(element(0x86, &dib));
+        let (_, reference) = self.add_entry(body, false);
+        Record {
+            depth,
+            kind: props::num_bytes(doc::K_PICTURE),
+            attrs: vec![
+                int_attr(57, &[1]),
+                int_attr(5, &size),
+                int_attr(61, &[rot]),
+                Attr { class: 0xc0, tag: 7, value: reference },
+                int_attr(3, &[id]),
+            ],
+        }
     }
 
     /// Turn a page clockwise by `quarters` × 90°.
@@ -866,9 +950,9 @@ impl Document {
         for r in &mut records {
             for a in &mut r.attrs {
                 if a.class & 0xc0 == 0xc0 {
-                    if let Some((i, len)) = write::read_ref(&a.value) {
+                    if let Some((i, _)) = write::read_ref(&a.value) {
                         if let Some(&n) = map.get(&i) {
-                            a.value = write::entry_ref(n, len);
+                            a.value = write::renumber_ref(&a.value, n);
                         }
                     }
                 }
@@ -977,10 +1061,43 @@ impl Document {
         self.records.iter().any(|r| r.kind_num() == doc::K_SIGNATURE)
     }
 
-    /// Is `obj` one of the annotation kinds this editor can redraw?
+    /// Is `obj` one of the annotation kinds this editor can redraw
+    /// (pictures: resize and switch see-through)?
     pub fn editable(&self, page: usize, obj: usize) -> bool {
-        self.shape_of(page, obj).is_some()
+        self.shape_of(page, obj).is_some() || self.picture_see_through(page, obj).is_some()
     }
+}
+
+/// CLSID_Picture_EnhMetafile {00000319-0000-0000-C000-000000000046}.
+const CLSID_PICTURE_EMF: [u8; 16] = [0x19, 0x03, 0, 0, 0, 0, 0, 0, 0xc0, 0, 0, 0, 0, 0, 0, 0x46];
+const OLE_EMF_NAME: &str = "Picture (Enhanced Metafile)";
+
+/// The file DocuWorks keeps for an embedded OLE picture: a short header
+/// (the file's length last), then an OLE compound file holding `\1Ole`,
+/// `\1CompObj` and `CONTENTS` (as OLE stores a static metafile: the size
+/// of its header, the header, then the whole metafile).
+fn ole_picture_file(emf: &[u8]) -> Vec<u8> {
+    let mut comp = vec![1, 0, 0xfe, 0xff, 3, 0x0a, 0, 0, 0xff, 0xff, 0xff, 0xff];
+    comp.extend_from_slice(&CLSID_PICTURE_EMF);
+    let name = format!("{OLE_EMF_NAME}\0");
+    comp.extend_from_slice(&(name.len() as u32).to_le_bytes());
+    comp.extend_from_slice(name.as_bytes());
+    comp.extend_from_slice(&[0xff, 0xff, 0xff, 0xff, 0x0e, 0, 0, 0]); // CF_ENHMETAFILE
+    comp.extend_from_slice(&[0; 4]);
+    comp.extend_from_slice(&0x71b2_39f4u32.to_le_bytes()); // Unicode marker
+    comp.extend_from_slice(&[0; 12]);
+    let mut ole = [0u8; 20];
+    ole[0] = 1;
+    ole[3] = 2;
+    // CONTENTS: the header size, a copy of the header, then the metafile
+    let mut contents = 108u32.to_le_bytes().to_vec();
+    contents.extend_from_slice(&emf[..108]);
+    contents.extend_from_slice(emf);
+    let cfb = crate::cfb::write(CLSID_PICTURE_EMF, &[("\u{1}Ole", &ole), ("\u{1}CompObj", &comp), ("CONTENTS", &contents)]);
+    let mut out = vec![0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0];
+    out.extend_from_slice(&(cfb.len() as u32).to_le_bytes());
+    out.extend(cfb);
+    out
 }
 
 /// A 24-bit bottom-up DIB (BITMAPINFOHEADER + rows) from RGBA pixels

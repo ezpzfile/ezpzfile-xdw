@@ -214,6 +214,7 @@ function paint(ctx, d, imgs, k) {
       ctx.save();
       ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
       if (it[4] < 1) ctx.globalAlpha = it[4];
+      if (it[5]) ctx.globalCompositeOperation = "multiply";
       ctx.drawImage(img, 0, 0, 1, 1);
       ctx.restore();
     }
@@ -572,6 +573,10 @@ function bindPage(div, i) {
       act(() => { S.ed.moveObject(i, d.k, g.x, g.y); return { pages: [i], sel: { p: i, o: d.k } }; });
     } else {
       const o = S.info[i].objects[d.k];
+      if (o.kind === "picture" && o.seeThrough != null) {
+        act(() => { S.ed.setPicture(i, d.k, g.x, g.y, g.w, g.h, o.seeThrough); return { pages: [i], sel: { p: i, o: d.k } }; });
+        return;
+      }
       if (!o.shape) { showSel(); return; }
       const shape = scaleShape(o.shape, o, g);
       act(() => { S.ed.changeAnnotation(i, d.k, g.x, g.y, g.w, g.h, JSON.stringify(shape)); return { pages: [i], sel: { p: i, o: d.k } }; });
@@ -775,8 +780,14 @@ function renderProps() {
   } else if (s && s.type === "line") {
     box.append(colorRow("色", s.color, COLORS, (c) => change({ color: c ?? 0 })));
     box.append(widthRow(s.width, (w) => change({ width: w })));
+  } else if (ob.kind === "picture" && ob.seeThrough != null) {
+    const set = (on) => { if (on !== ob.seeThrough) act(() => { S.ed.setPicture(p, o, ob.x, ob.y, ob.w, ob.h, on); return { pages: [p], sel: { p, o } }; }); };
+    box.append(el("div", { class: "row" }, el("label", { text: "透過" }),
+      el("button", { class: "pbtn" + (ob.seeThrough ? " on" : ""), text: "白を透かす", onclick: () => set(true) }),
+      el("button", { class: "pbtn" + (ob.seeThrough ? "" : " on"), text: "透かさない", onclick: () => set(false) })));
+    box.append(el("p", { class: "note", text: ob.seeThrough ? "白い部分から下の文字が見えます。DocuWorks でも同じに見えます（貼り付けた図として保存）。" : "白い部分も含めて不透明です（DocuWorks の画像注釈）。" }));
   } else if (ob.kind !== "page") {
-    box.append(el("p", { class: "note", text: ob.kind === "signature" ? "署名です。ここでは動かしたり消したりできません。" : ob.kind === "picture" ? "画像の注釈です。移動・削除ができます（DocuWorks では白い部分も不透明に表示されます）。" : "この注釈は移動と削除ができます（中身の変更は DocuWorks で）。" }));
+    box.append(el("p", { class: "note", text: ob.kind === "signature" ? "署名です。ここでは動かしたり消したりできません。" : "この注釈は移動と削除ができます（中身の変更は DocuWorks で）。" }));
   }
   if (ob.kind !== "page" && ob.kind !== "signature") box.append(el("div", { class: "row" }, el("button", { class: "pbtn", html: ic("trash-2") + "削除", onclick: deleteSelected })));
   host.append(box);
@@ -1038,15 +1049,21 @@ function pickFile(accept, multiple) {
   });
 }
 
-/** Draw a picture file on a canvas (at most `max` pixels on its long side, on white). */
+/** Draw a picture file on a canvas (at most `max` pixels on its long side, on white).
+ * `c.clear` tells whether the picture had transparent parts. */
 async function fileCanvas(file, max) {
   const bmp = await createImageBitmap(file);
   const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
   const c = document.createElement("canvas");
   c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
   const g = c.getContext("2d");
-  g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
   g.drawImage(bmp, 0, 0, c.width, c.height);
+  const a = g.getImageData(0, 0, c.width, c.height).data;
+  c.clear = false;
+  for (let i = 3; i < a.length; i += 4) if (a[i] < 250) { c.clear = true; break; }
+  g.globalCompositeOperation = "destination-over";
+  g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+  g.globalCompositeOperation = "source-over";
   bmp.close && bmp.close();
   return c;
 }
@@ -1074,8 +1091,10 @@ async function pickPicture() {
     let w = Math.min(pg.w * 0.5, c.width * 2540 / 150), h = w * c.height / c.width;
     if (h > pg.h * 0.6) { h = pg.h * 0.6; w = h * c.width / c.height; }
     const rgba = new Uint8Array(c.getContext("2d").getImageData(0, 0, c.width, c.height).data.buffer);
-    act(() => ({ pages: [p], sel: { p, o: S.ed.addPicture(p, (pg.w - w) / 2, (pg.h - h) / 2, w, h, rgba, c.width, c.height) } }));
-    toast("画像を貼りました（DocuWorks では白い部分も不透明に表示されます）", 4000);
+    // a picture with transparent parts stays see-through (white shows the page)
+    const see = c.clear;
+    act(() => ({ pages: [p], sel: { p, o: S.ed.addPicture(p, (pg.w - w) / 2, (pg.h - h) / 2, w, h, rgba, c.width, c.height, see) } }));
+    toast(see ? "画像を貼りました。白い部分は下の文字が透けて見えます。" : "画像を貼りました。右の「透過」で白い部分を透かせます。", 4000);
   } catch (e) {
     toast("画像を読めませんでした: " + (e.message || e));
   }

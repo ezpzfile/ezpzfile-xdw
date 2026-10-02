@@ -103,6 +103,9 @@ pub enum Item {
         clip: u32,
         /// Opacity 0-1.
         alpha: f32,
+        /// Multiply with what is under it (SRCAND). Near-white pixels are
+        /// also made transparent, for painters that cannot multiply.
+        mul: bool,
     },
 }
 

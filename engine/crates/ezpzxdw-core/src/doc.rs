@@ -49,6 +49,13 @@ pub const K_LINK: i64 = 0xc02f;
 /// A signature (DocuWorks 電子印鑑 / PKI), placed on the page like an annotation.
 pub const K_SIGNATURE: i64 = 0x8043;
 
+/// Marks our see-through picture: an embedded OLE picture (800f, an
+/// Enhanced Metafile, as DocuWorks keeps a pasted metafile) whose drawing is
+/// one STRETCHDIBITS with SRCAND, so the picture multiplies the page (white
+/// shows what is under it). The attribute is ours; without it the object is
+/// still drawn, just not changed as a picture.
+pub const PICTURE_MARK: &str = "%ezpz_picture";
+
 /// What kind of thing an object is, in words.
 pub fn kind_name(k: i64) -> &'static str {
     match k {
@@ -244,11 +251,12 @@ impl Document {
                         let text = t.and_then(|t| {
                             self.named(t, "%Text(w").map(|a| utf16(&a.value)).or_else(|| self.named(t, "%Text").map(|a| crate::sjis::decode(a.value.split(|&b| b == 0).next().unwrap_or(&[]))))
                         });
+                        let ours = kind == K_OLE && self.named(k, PICTURE_MARK).is_some();
                         objects.push(Object {
                             place: j,
                             record: k,
                             kind,
-                            kind_name: kind_name(kind),
+                            kind_name: if ours { "picture" } else { kind_name(kind) },
                             x: pos.first().copied().unwrap_or(0),
                             y: pos.get(1).copied().unwrap_or(0),
                             w: dim.first().copied().or(osize.first().copied()).unwrap_or(0),
@@ -315,6 +323,26 @@ impl Document {
         Ok(out)
     }
 
+    /// The pixels of a picture annotation: DocuWorks' bitmap annotation
+    /// (803f) or our see-through picture (one DIB in its metafile).
+    pub fn picture_image(&self, o: &Object) -> Option<Image> {
+        if o.kind_name != "picture" {
+            return None;
+        }
+        let c = match self.drawing(o.record)? {
+            Drawing::Entry(i) => match self.body(i)? {
+                BodyRef::Fields(b) => Content::of_fields(b),
+                _ => None,
+            },
+            Drawing::Inline(v) => Content::of_fields(&v),
+        }?;
+        if c.data.get(40..44) == Some(b" EMF") {
+            emf::single_dib(&c.data)
+        } else {
+            emf::external_picture(&c.data).map(|(i, _)| i)
+        }
+    }
+
     pub fn render_object(&self, o: &Object, out: &mut Display) {
         let Some(dr) = self.drawing(o.record) else {
             out.skipped.push(format!("{} without drawing", o.kind_name));
@@ -350,7 +378,7 @@ impl Document {
                     Some((pw, ph)) => {
                         out.images.push(Image { w: pw, h: ph, data: ImageData::Jpeg(c.data.clone()) });
                         let image = (out.images.len() - 1) as u32;
-                        out.items.push(Item::Image { image, m: [bw as f32, 0.0, 0.0, bh as f32, 0.0, 0.0], clip: 0, alpha: 1.0 });
+                        out.items.push(Item::Image { image, m: [bw as f32, 0.0, 0.0, bh as f32, 0.0, 0.0], clip: 0, alpha: 1.0, mul: false });
                     }
                     None => out.skipped.push(format!("{}: picture page not readable", o.kind_name)),
                 }
@@ -360,7 +388,7 @@ impl Document {
                 if let Some((img, _)) = emf::external_picture(&c.data) {
                     out.images.push(img);
                     let image = (out.images.len() - 1) as u32;
-                    out.items.push(Item::Image { image, m: [bw as f32, 0.0, 0.0, bh as f32, 0.0, 0.0], clip: 0, alpha: 1.0 });
+                    out.items.push(Item::Image { image, m: [bw as f32, 0.0, 0.0, bh as f32, 0.0, 0.0], clip: 0, alpha: 1.0, mul: false });
                 } else {
                     out.skipped.push(format!("{}: bitmap not readable", o.kind_name));
                 }

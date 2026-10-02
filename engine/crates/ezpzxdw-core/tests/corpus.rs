@@ -70,6 +70,21 @@ fn edits_save_and_read_back() {
         for (k, s) in shapes.iter().enumerate() {
             d.add_annotation(0, 1000.0 + 500.0 * k as f64, 2000.0 + 3000.0 * k as f64, 4000.0, 1600.0, s).unwrap();
         }
+        // pictures: DocuWorks' bitmap annotation and our see-through one;
+        // then switch the first and resize the second
+        let mut px = vec![255u8; 8 * 8 * 4];
+        for k in 0..8 {
+            px[(k * 8 + k) * 4 + 1] = 0;
+            px[(k * 8 + k) * 4 + 2] = 0;
+        }
+        px[7] = 0; // a transparent pixel becomes white
+        let pa = d.add_picture(0, 2000.0, 3000.0, 3000.0, 3000.0, &px, 8, 8, false).unwrap();
+        let pb = d.add_picture(0, 6000.0, 3000.0, 3000.0, 3000.0, &px, 8, 8, true).unwrap();
+        assert_eq!((d.picture_see_through(0, pa), d.picture_see_through(0, pb)), (Some(false), Some(true)), "{name}");
+        d.set_picture(0, pa, 2000.0, 3000.0, 3000.0, 3000.0, true).unwrap();
+        d.set_picture(0, pb, 6000.0, 3000.0, 1500.0, 4500.0, false).unwrap();
+        assert_eq!((d.picture_see_through(0, pa), d.picture_see_through(0, pb)), (Some(true), Some(false)), "{name}");
+        assert_eq!((d.pages[0].objects[pb].w, d.pages[0].objects[pb].h), (1500, 4500), "{name}");
         let objs = d.pages[0].objects.len();
         d.move_object(0, objs - 1, 5000.0, 5000.0).unwrap();
         d.rotate_page(n - 1, 1).unwrap();
@@ -82,11 +97,21 @@ fn edits_save_and_read_back() {
         }
         let saved = d.save().unwrap_or_else(|e| panic!("{name}: {e}"));
         let back = Document::open(saved).unwrap();
-        assert_eq!(back.records, d.records, "{name}");
+        assert_eq!(back.records, d.to_write().0, "{name}");
         assert_eq!(back.pages.len(), n, "{name}");
         let first_with_annots = if moved { 1 } else { 0 };
         let shapes_back: Vec<_> = (0..back.pages[first_with_annots].objects.len()).filter_map(|o| back.shape_of(first_with_annots, o)).collect();
         assert!(shapes_back.len() >= shapes.len(), "{name}: annotations read back");
+        let pg = &back.pages[first_with_annots];
+        let pics: Vec<_> = pg.objects.iter().filter(|o| o.kind_name == "picture").rev().take(2).collect();
+        assert_eq!(pics.len(), 2, "{name}: pictures read back");
+        for o in pics {
+            let img = back.picture_image(o).unwrap_or_else(|| panic!("{name}: picture pixels"));
+            let ezpzxdw_core::gfx::ImageData::Rgba(p) = &img.data else { panic!("{name}: rgba") };
+            assert_eq!((img.w, img.h, &p[..8]), (8, 8, &[255, 0, 0, 255, 255, 255, 255, 255][..]), "{name}");
+        }
+        let disp = back.render(first_with_annots).unwrap();
+        assert!(disp.items.iter().any(|it| matches!(it, ezpzxdw_core::gfx::Item::Image { mul: true, .. })), "{name}: see-through picture multiplies");
         for k in 0..back.pages.len() {
             let disp = back.render(k).unwrap();
             assert!(disp.skipped.is_empty(), "{name} page {}: {:?}", k + 1, disp.skipped);

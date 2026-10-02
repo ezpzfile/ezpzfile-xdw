@@ -2,6 +2,7 @@
  *   dwapi info   FILE            document, pages, annotations and their settings
  *   dwapi make   FILE            add a date stamp, a sticky note (with text) and a text box to page 1, save
  *   dwapi render FILE PAGE OUT   page as an image file (DocuWorks draws it)
+ *   dwapi addimg FILE IMAGE X Y  add a picture annotation from an image file to page 1, save
  * Strings are Shift_JIS (code page 932). */
 #include <windows.h>
 #include <stdio.h>
@@ -80,7 +81,8 @@ int main(int argc, char **argv) {
     if (!dll) { fprintf(stderr, "cannot load xdwapi.dll (%lu)\n", GetLastError()); return 2; }
     pOpen open = fn("XDW_OpenDocumentHandle");
     pClose close = fn("XDW_CloseDocumentHandle");
-    OPEN_MODE_EX om = { sizeof om, (strcmp(argv[1], "make") == 0 || strcmp(argv[1], "stampvar") == 0) ? 1 : 0, 1 };
+    int edit = strcmp(argv[1], "make") == 0 || strcmp(argv[1], "stampvar") == 0 || strcmp(argv[1], "addimg") == 0 || strcmp(argv[1], "move") == 0;
+    OPEN_MODE_EX om = { sizeof om, edit ? 1 : 0, 1 };
     HDOC d = NULL;
     int r = open(argv[2], &d, &om);
     if (r < 0) { printf("OPEN-ERROR %08x\n", r); return 3; }
@@ -173,6 +175,32 @@ int main(int argc, char **argv) {
         printf("month %d\n", set(d, a, "%MonthField", 1, "10", 0, NULL));
         printf("day %d\n", set(d, a, "%DayField", 1, "01", 0, NULL));
         if (argv[6][0] != '-') printf("color %d\n", set(d, a, "%BorderColor", 0, (char *)&color, 0, NULL));
+        printf("save %d\n", save(d, NULL));
+    } else if (strcmp(argv[1], "addimg") == 0 && argc >= 6) {
+        pAdd add = fn("XDW_AddAnnotation");
+        pSave save = fn("XDW_SaveDocument");
+        struct { AA_INIT common; char path[256]; } bi;
+        memset(&bi, 0, sizeof bi);
+        bi.common.nSize = sizeof bi; bi.common.nAnnotationType = 32831;
+        strncpy(bi.path, argv[3], sizeof bi.path - 1);
+        HANN a = NULL;
+        r = add(d, 32831, 1, atoi(argv[4]), atoi(argv[5]), &bi, &a, NULL);
+        printf("bitmap add %d\n", r);
+        r = save(d, NULL);
+        printf("save %d\n", r);
+    } else if (strcmp(argv[1], "move") == 0 && argc >= 7) {
+        /* move FILE PAGE INDEX X Y [W H]: DocuWorks moves (and sizes) an annotation, then saves */
+        typedef int (__stdcall *pPos)(HDOC, HANN, int, int, void *);
+        typedef int (__stdcall *pSize)(HDOC, HANN, int, int, void *);
+        pAnnInfo ai = fn("XDW_GetAnnotationInformation");
+        pPos pos = fn("XDW_SetAnnotationPosition");
+        pSize size = fn("XDW_SetAnnotationSize");
+        pSave save = fn("XDW_SaveDocument");
+        ANN_INFO a; memset(&a, 0, sizeof a); a.nSize = sizeof a;
+        r = ai(d, atoi(argv[3]), NULL, atoi(argv[4]), &a, NULL);
+        printf("info %d\n", r);
+        printf("position %d\n", pos(d, a.handle, atoi(argv[5]), atoi(argv[6]), NULL));
+        if (argc >= 9) printf("size %d\n", size(d, a.handle, atoi(argv[7]), atoi(argv[8]), NULL));
         printf("save %d\n", save(d, NULL));
     } else if (strcmp(argv[1], "render") == 0 && argc >= 5) {
         pConv conv = fn("XDW_ConvertPageToImageFile");

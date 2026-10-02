@@ -80,6 +80,28 @@ pub fn entry_ref(index: u32, body_len: usize) -> Vec<u8> {
     v
 }
 
+/// A reference to a raw entry holding LHA-compressed data (an embedded OLE
+/// object's file): `81` index, `82` expanded length, `83` stored length.
+pub fn packed_ref(index: u32, expanded: usize, stored: usize) -> Vec<u8> {
+    let mut v = entry_ref(index, expanded);
+    v.extend(element(0x83, &tlv::uint_bytes(stored as u64)));
+    v
+}
+
+/// The same reference pointing at entry `index` (other fields kept).
+pub fn renumber_ref(v: &[u8], index: u32) -> Vec<u8> {
+    let Ok(items) = tlv::list(v, 0, v.len()) else { return v.to_vec() };
+    let mut out = Vec::with_capacity(v.len() + 2);
+    for t in items {
+        if t.tag == 0x81 {
+            out.extend(element(0x81, &tlv::uint_bytes(index as u64)));
+        } else {
+            out.extend_from_slice(&v[t.start..t.end()]);
+        }
+    }
+    out
+}
+
 /// Read a reference written by `entry_ref` (extra fields are ignored).
 pub fn read_ref(v: &[u8]) -> Option<(u32, usize)> {
     let items = tlv::list(v, 0, v.len()).ok()?;
@@ -186,6 +208,9 @@ mod tests {
     fn refs_round_trip() {
         let v = entry_ref(3, 6041);
         assert_eq!(v, vec![0x81, 1, 3, 0x82, 2, 0x17, 0x99]);
+        let p = packed_ref(303, 1283094, 598778);
+        assert_eq!(p, vec![0x81, 2, 1, 0x2f, 0x82, 3, 0x13, 0x94, 0x16, 0x83, 3, 0x09, 0x22, 0xfa]);
+        assert_eq!(renumber_ref(&p, 2), vec![0x81, 1, 2, 0x82, 3, 0x13, 0x94, 0x16, 0x83, 3, 0x09, 0x22, 0xfa]);
         assert_eq!(read_ref(&v), Some((3, 6041)));
     }
 }

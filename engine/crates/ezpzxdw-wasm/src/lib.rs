@@ -120,9 +120,9 @@ fn display_json(d: &Display) -> String {
                     xs.join(",")
                 );
             }
-            Item::Image { image, m, clip, alpha } => {
+            Item::Image { image, m, clip, alpha, mul } => {
                 let m: Vec<String> = m.iter().map(|v| format!("{v:.2}")).collect();
-                let _ = write!(o, "[\"i\",{image},[{}],{clip},{alpha}]", m.join(","));
+                let _ = write!(o, "[\"i\",{image},[{}],{clip},{alpha},{}]", m.join(","), *mul as u8);
             }
         }
     }
@@ -166,6 +166,7 @@ impl XdwDoc {
                         "kind": o.kind_name, "x": o.x, "y": o.y, "w": o.w, "h": o.h,
                         "rotation": o.rotation, "text": o.text,
                         "editable": self.doc.editable(pi, oi),
+                        "seeThrough": self.doc.picture_see_through(pi, oi),
                         "shape": self.doc.shape_of(pi, oi),
                     })
                 })
@@ -289,13 +290,25 @@ impl XdwDoc {
         Ok(())
     }
 
-    /// Add a picture annotation (RGBA pixels, `pw` × `ph`; shown opaque).
+    /// Add a picture annotation (RGBA pixels, `pw` × `ph`). `see_through`:
+    /// the white parts show the page, also in DocuWorks.
     #[wasm_bindgen(js_name = addPicture)]
-    pub fn add_picture(&mut self, page: usize, x: f64, y: f64, w: f64, h: f64, rgba: &[u8], pw: u32, ph: u32) -> Result<usize, JsError> {
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_picture(&mut self, page: usize, x: f64, y: f64, w: f64, h: f64, rgba: &[u8], pw: u32, ph: u32, see_through: bool) -> Result<usize, JsError> {
         self.before();
-        let r = self.doc.add_picture(page, x, y, w, h, rgba, pw, ph).map_err(|e| self.fail(e))?;
+        let r = self.doc.add_picture(page, x, y, w, h, rgba, pw, ph, see_through).map_err(|e| self.fail(e))?;
         self.after();
         Ok(r)
+    }
+
+    /// Resize a picture annotation, or switch it to see-through or back.
+    #[wasm_bindgen(js_name = setPicture)]
+    #[allow(clippy::too_many_arguments)]
+    pub fn set_picture(&mut self, page: usize, obj: usize, x: f64, y: f64, w: f64, h: f64, see_through: bool) -> Result<(), JsError> {
+        self.before();
+        self.doc.set_picture(page, obj, x, y, w, h, see_through).map_err(|e| self.fail(e))?;
+        self.after();
+        Ok(())
     }
 
     /// Insert a blank page `w` × `h` (1/100 mm) at position `at`.

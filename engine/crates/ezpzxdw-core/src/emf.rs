@@ -615,7 +615,7 @@ impl<'a> R<'a> {
         let clip = self.clip_index();
         self.out.images.push(img);
         let image = (self.out.images.len() - 1) as u32;
-        self.out.items.push(Item::Image { image, m, clip, alpha: 1.0 });
+        self.out.items.push(Item::Image { image, m, clip, alpha: 1.0, mul: rop == 0x8800C6 });
     }
 
     pub(crate) fn pattern_rect(&mut self, dst: [f64; 4], rop: u32) {
@@ -1431,6 +1431,25 @@ pub fn dw_points(p: &[u8], enc: u8) -> Vec<(f64, f64)> {
 
 /// A picture stored in its own entry: 16-byte header (size, 0, width,
 /// height) and then JPEG data, or a DIB.
+/// The picture of the first STRETCHDIBITS record of an EMF (our
+/// see-through pictures are one such record), as RGBA.
+pub fn single_dib(b: &[u8]) -> Option<Image> {
+    let mut i = 0;
+    while i + 8 <= b.len() {
+        let (t, n) = (u32le(b, i), u32le(b, i + 4) as usize);
+        if n < 8 || i + n > b.len() || t == 14 {
+            return None;
+        }
+        if t == 81 {
+            let rec = &b[i..i + n];
+            let (ob, cb, ox, cx) = (u32le(rec, 48) as usize, u32le(rec, 52) as usize, u32le(rec, 56) as usize, u32le(rec, 60) as usize);
+            return dib::decode(rec.get(ob..ob + cb)?, rec.get(ox..ox + cx)?);
+        }
+        i += n;
+    }
+    None
+}
+
 pub fn external_picture(d: &[u8]) -> Option<(Image, bool)> {
     if d.len() > 18 && d[16] == 0xff && d[17] == 0xd8 {
         let w = u32le(d, 8);

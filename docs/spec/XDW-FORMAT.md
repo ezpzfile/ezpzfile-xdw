@@ -112,6 +112,9 @@ Otherwise the body is raw data:
   then a JPEG stream; listed again in trailer 0x8d [corpus]
 - an attached **original file** (e.g. the `.docx` the document was printed
   from), LZH-compressed; see 4.4
+- an embedded **OLE object's file** (`%OLE_CONTENT_FILE`, 5.5),
+  LZH-compressed; its reference has `81` entry, `82` expanded length and
+  `83` stored length
 - a list of attribute definitions that was too large for its record (4.2)
 
 ## 4. Properties: the object tree
@@ -242,7 +245,8 @@ swap the page size, move and swap every placement, add 90 to every object's 61.
 - picture (803f): only 57, 5, 61, 3 and 7; the drawing is kind 7 (below).
   **Shown opaque**: white pixels cover the page [viewer: `ATTR_TRANSPARENT`,
   `%ATTR_TRANSPARENT`, `ATTR_FILLTRANSPARENT`, `%Transparent` = 1 change
-  nothing]
+  nothing; DocuWorks 10's bitmap module has no such setting either]. For a
+  see-through picture see 5.5
 - text with a frame: `%FrameOnOff`; the viewer program also knows
   `%FrameColor` and `%FrameThick` (names found in DWVLT.exe)
 - date stamp (8033), as DocuWorks 10 writes it [made with its API, read back]:
@@ -338,6 +342,46 @@ picture is a raw entry: `u32 total length, 0, width, height` + JPEG, listed in
 attribute 301… and in trailer 0x8d [viewer: a page made this way from one
 JPEG shows the picture].
 
+### 5.5 See-through pictures (embedded OLE pictures)
+
+DocuWorks plays every annotation's stored drawing with its raster
+operations, so a STRETCHDIBITS with **SRCAND** (`0x008800C6`) multiplies the
+picture with the page: white shows what is under it, colours darken it like
+ink. Where that drawing may live [DocuWorks 10, API render and Viewer]:
+
+| holder | shown see-through | moved in DocuWorks | sized in DocuWorks |
+|---|---|---|---|
+| bitmap annotation (803f) | no, it ignores the drawing's operations | yes | yes |
+| rectangle (803d) with this drawing | yes | yes | the rectangle is redrawn from its settings: the picture is gone |
+| custom annotation (8045) with an unknown `%annguid` | yes | through the API; **dragging it crashes Viewer** (write to address 0 in `mpcstg.dll`) | no (API: E_INVALIDARG) |
+| **embedded OLE picture (800f, Enhanced Metafile)** | **yes** | **yes** | **yes**, without crashing |
+
+The editor keeps a see-through picture the way DocuWorks keeps a metafile
+pasted from the clipboard [corpus: "Picture (Enhanced Metafile)" objects]:
+
+- the object (800f): 57 = 1, 55 = 1, 56 = 1, `%OLE_SIZES` (107: the
+  metafile's size, 1/100 mm), `%OLE_SERVER_NAME` = `Picture (Enhanced
+  Metafile)`, `%OLE_CLSID` = the 16 bytes of
+  `{00000319-0000-0000-C000-000000000046}`, `%OLE_DWASPECT` = 1,
+  `%OLE_ITEMTYPE` = 3, 3, 5, 7 (the drawing, in its own entry) and
+  `%OLE_CONTENT_FILE` (a raw entry, 3.2)
+- the content file: 22 bytes (`00 01 00 00`, u32 1 to 12 in the samples,
+  u32 0, u16 0, u32 1, u32 length of the rest), then an OLE compound file
+  (version 3, 512-byte sectors) whose root has that CLSID and holds `\1Ole`
+  (20 bytes: `01 00 00 02`, then zeros), `\1CompObj` (user type `Picture
+  (Enhanced Metafile)`, clipboard format 14) and `CONTENTS` = u32 108, a copy
+  of the metafile's 108-byte header, then the whole metafile
+- the drawing: one STRETCHDIBITS (SRCAND, halftone stretching) of a 24-bit
+  DIB; transparent pixels are made white first
+- our own attribute `%ezpz_picture` = 1 marks it as a picture the editor can
+  resize and switch back; DocuWorks keeps it when it saves the file
+
+After sizing the object, DocuWorks asks OLE to draw it again and stores that
+drawing. Under Wine that drawing comes out empty for DocuWorks' own pasted
+metafiles as well as ours (Wine's OLE does not draw static metafiles), so this
+step is checked only as far as Wine goes. Double-clicking the object tries to
+start an OLE server: Viewer says it cannot, as for any pasted picture.
+
 ## 6. Writing (what EZPZ File XDW does)
 
 1. Keep the file; append `0x61 { new entries, 0x63 properties, trailer }`.
@@ -351,7 +395,7 @@ pages, annotations and settings and draws every page; Desk lists them with
 their pages) and in DocuWorks Viewer Light, with added text,
 highlighter, rectangle, ellipse and line annotations, moved annotations,
 turned, deleted and reordered pages, sticky notes, date stamps, picture
-annotations, new blank / picture pages, pages copied from other documents,
+annotations, see-through pictures (5.5), new blank / picture pages, pages copied from other documents,
 and edited binders ([experiments/results.md](../../experiments/results.md)).
 Copying a page copies every entry its records refer to (drawing, thumbnail,
 pictures, outsourced definitions) and renumbers the references.
@@ -360,7 +404,6 @@ pictures, outsourced definitions) and renumbers the references.
 
 - trailer 0x82, header 0x80 / 0x83, page attributes 57 / 62 / 69 / 14
 - the WMF comment records `DW\x02\x00…03` in old pages (not needed to draw)
-- 8045 custom annotation data, OLE objects
+- 8045 custom annotation data (`%annotation_customdata`)
 - markers, polygons, received stamps as Desk writes them
-- making picture annotations see-through
 - signatures (8043: `%sigver`, `%spd`, `%pdbv` …), passwords

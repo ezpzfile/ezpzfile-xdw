@@ -18,3 +18,4 @@ pub mod emfw;
 pub mod edit;
 pub mod pdf;
 pub mod pages;
+pub mod cfb;

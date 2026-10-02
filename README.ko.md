@@ -18,7 +18,9 @@
 - **`.xdw`로 저장**: DocuWorks와 같은 방식(끝에 세그먼트 하나를 덧붙이고 앞부분은 건드리지 않음).
   저장한 파일은 **DocuWorks Viewer Light**에서 열림
 - 주석: **텍스트, 付箋(포스트잇), 日付印(날짜 도장), 형광펜, 사각형, 타원, 직선, 그림** 추가. 이동·크기·
-  내용 변경·삭제(DocuWorks에서 단 기존 주석도 이동·삭제 가능)
+  내용 변경·삭제(DocuWorks에서 단 기존 주석도 이동·삭제 가능). 그림은 **흰 부분을 비치게** 해서 밑의 글자가
+  보이게 할 수 있고, DocuWorks에서도 똑같이 보임
+- 쪽 안 **글자 선택·복사**, **문서 안 찾기**(Ctrl+F)
 - 쪽: 왼쪽·오른쪽 회전, 삭제, 순서 바꾸기(쪽 목록에서 끌기). 빈 쪽, 그림(JPEG / PNG 등), 다른 `.xdw` /
   `.xbd`의 쪽, PDF 쪽(그림으로. pdf.js 때문에 처음 한 번은 인터넷 필요) **넣기**
 - **바인더(`.xbd`)**: 쪽 목록에 문서별로 표시. `.xdw` 추가, 이름 바꾸기, 순서 바꾸기, 빼기
@@ -28,8 +30,8 @@
 DocuWorks가 확인하는 검사값, 드라이버 전용 그리기 기록 등 파일 형식 분석 결과는
 [docs/spec/XDW-FORMAT.md](docs/spec/XDW-FORMAT.md)(영어)에 있습니다.
 
-아직 안 되는 것: 서명·암호(서명된 문서는 열리지만 편집하면 서명이 무효가 되므로 편집기가 알려 줌),
-쪽 안 글자 선택, 비치는 그림 주석. 자세한 내용은 [계획](docs/PLAN.ko.md)
+아직 안 되는 것: 서명·암호(서명된 문서는 열리지만 편집하면 서명이 무효가 되므로 편집기가 알려 줌).
+자세한 내용은 [계획](docs/PLAN.ko.md)
 ([日本語](docs/PLAN.ja.md), [English](docs/PLAN.en.md)).
 
 ## 편집기
@@ -39,13 +41,13 @@ DocuWorks가 확인하는 검사값, 드라이버 전용 그리기 기록 등 �
 오른쪽 속성), 모양은 EZPZ File 디자인입니다.
 
 키: T 텍스트, S 付箋, D 日付印, H 형광펜, R 사각형, E 타원, L 직선, Esc 선택, Delete 삭제,
-화살표(Shift는 1cm), Ctrl+Z / Ctrl+Y, Ctrl+S, Ctrl+Shift+S(PDF·텍스트로 저장), Ctrl+P.
+화살표(Shift는 1cm), Ctrl+Z / Ctrl+Y, Ctrl+S, Ctrl+Shift+S(PDF·텍스트로 저장), Ctrl+P, Ctrl+F(찾기).
 열린 문서에 PDF나 그림을 끌어다 놓으면 쪽으로 들어갑니다.
 
 ## 진짜 DocuWorks로 확인
 
 `tools/dwview`는 후지필름의 무료 뷰어 DocuWorks Viewer Light를 Wine에서 돌려, 파일이 열리는지 화면
-사진과 함께 알려 줍니다. `tools/dwapi`는 DocuWorks 10 본체(체험판 설치)의 API를 불러, 우리가 저장한
+사진과 함께 알려 줍니다. `tools/dwapi`는 DocuWorks 10 본체(최신판)의 API를 불러, 우리가 저장한
 파일을 DocuWorks가 직접 읽고(쪽, 주석과 그 설정) 쪽을 그리게 합니다. 테스트로 저장한 파일은 모두
 일치하고 그려졌습니다(공개 샘플 38개 + DocuWorks 10 샘플 5개, 모든 편집 기능). DocuWorks Desk 목록에도
 쪽과 함께 나옵니다. 결과는 [experiments/results.md](experiments/results.md)에 있습니다.

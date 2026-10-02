@@ -125,6 +125,35 @@ impl Emf {
         }
     }
 
+    /// STRETCHDIBITS: a DIB (`bmi` = BITMAPINFOHEADER, then `bits`) of
+    /// `pw` × `ph` pixels into `dst` (x, y, w, h in units) with raster
+    /// operation `rop`: SRCCOPY 0x00CC0020, or SRCAND 0x008800C6, which
+    /// multiplies the picture with what is below (white shows the page).
+    pub fn stretch_dib(&mut self, dst: [i32; 4], pw: i32, ph: i32, bmi: &[u8], bits: &[u8], rop: u32) {
+        let [x, y, w, h] = dst;
+        let head = 80u32; // record header and fixed fields
+        let off_bmi = head;
+        let off_bits = head + bmi.len() as u32;
+        let mut p = Vec::new();
+        let put = |p: &mut Vec<u8>, v: i32| p.extend_from_slice(&v.to_le_bytes());
+        for v in [x, y, x + w - 1, y + h - 1] {
+            put(&mut p, v); // bounds
+        }
+        for v in [x, y, 0, 0, pw, ph] {
+            put(&mut p, v);
+        }
+        for v in [off_bmi, bmi.len() as u32, off_bits, bits.len() as u32, 0, rop] {
+            p.extend_from_slice(&v.to_le_bytes());
+        }
+        put(&mut p, w);
+        put(&mut p, h);
+        p.extend_from_slice(bmi);
+        p.extend_from_slice(bits);
+        self.raw(81, &p);
+        let b = self.bounds.get_or_insert([x, y, x + w - 1, y + h - 1]);
+        *b = [b[0].min(x), b[1].min(y), b[2].max(x + w - 1), b[3].max(y + h - 1)];
+    }
+
     /// R2_MASKPEN (like a highlighter: the colour multiplies) or copy.
     pub fn mask_mode(&mut self, on: bool) {
         self.rec(20, &[if on { 9 } else { 13 }]);
