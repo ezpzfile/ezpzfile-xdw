@@ -28,4 +28,5 @@ User interface assets
   - UI font: Pretendard (SIL Open Font License 1.1), loaded from jsDelivr when online.
   - PDF pages are read with pdf.js (Mozilla, Apache License 2.0), loaded from
     cdnjs only when a PDF is inserted; it is not part of this repository.
-  - EZPZ File logo: (c) EZPZ File. Not covered by the MIT/Apache licences of the code.
+  - EZPZ File logos (docs/images/ezpz_*.svg and the editor's logo): (c) EZPZ File.
+    Not covered by the code licence (LICENSE).

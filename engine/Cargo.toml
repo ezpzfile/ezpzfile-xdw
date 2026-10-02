@@ -5,7 +5,7 @@ members = ["crates/ezpzxdw-core", "crates/ezpzxdw-cli", "crates/ezpzxdw-wasm"]
 [workspace.package]
 version = "0.2.0"
 edition = "2021"
-license = "MIT OR Apache-2.0"
+license-file = "../LICENSE"
 repository = "https://github.com/ezpzfile/ezpzfile-xdw"
 authors = ["EZPZ File <hello@ezpzfile.com>"]
 
