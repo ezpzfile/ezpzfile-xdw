@@ -3,6 +3,10 @@
 </p>
 <h1 align="center">EZPZ File XDW</h1>
 <p align="center"><b>日本語</b> · <a href="README.en.md">English</a> · <a href="README.ko.md">한국어</a></p>
+<p align="center">
+  <a href="https://ezpzfile.com/ja/xdw-editor"><img src="docs/images/demo-ja.svg" alt="ブラウザでデモを試す" height="56"></a>
+</p>
+<p align="center"><sub>デモ: <a href="https://ezpzfile.com/ja/xdw-editor">日本語</a> · <a href="https://ezpzfile.com/xdw-editor">English</a></sub></p>
 
 **DocuWorks（`.xdw`）文書を、Mac・Linux・スマホ・ブラウザで開いて、アノテーションを付けて、そのまま保存。**
 富士フイルム（旧富士ゼロックス）DocuWorks のファイルを扱うための、ゼロから作ったオープンソースの
@@ -11,7 +15,7 @@
 状態: **v0.2。`.xdw` / `.xbd` に保存し直せるビューア + エディタ（開発者向けプレビュー）。**
 富士フイルムビジネスイノベーション株式会社とは関係ありません。
 
-![XDW エディタの画面](docs/images/editor.png)
+[![XDW エディタの画面](docs/images/editor.png)](https://ezpzfile.com/ja/xdw-editor)
 
 <sub>見本の見積書に、日付印・蛍光ペン・付箋・透ける承認印を付けたところ。DocuWorks で開いても同じに見えます。</sub>
 

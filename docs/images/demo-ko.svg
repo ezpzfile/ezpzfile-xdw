@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="336" height="56" viewBox="0 0 336 56" role="img" aria-label="브라우저에서 데모 써 보기">
+  <title>브라우저에서 데모 써 보기</title>
+  <rect width="336" height="56" rx="28" fill="#0155FF"/>
+  <circle cx="30" cy="28" r="16" fill="#fff"/>
+  <path d="M25 20.5 L37 28 L25 35.5 Z" fill="#0155FF"/>
+  <text x="58" y="35.5" fill="#fff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans JP', 'Noto Sans KR', 'Noto Sans CJK JP', sans-serif" font-size="19" font-weight="700">브라우저에서 데모 써 보기</text>
+</svg>

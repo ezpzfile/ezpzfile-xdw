@@ -3,6 +3,10 @@
 </p>
 <h1 align="center">EZPZ File XDW</h1>
 <p align="center"><a href="README.md">日本語</a> · <b>English</b> · <a href="README.ko.md">한국어</a></p>
+<p align="center">
+  <a href="https://ezpzfile.com/xdw-editor"><img src="docs/images/demo-en.svg" alt="Try the live demo" height="56"></a>
+</p>
+<p align="center"><sub>Demo: <a href="https://ezpzfile.com/xdw-editor">English</a> · <a href="https://ezpzfile.com/ja/xdw-editor">日本語</a></sub></p>
 
 **Open, annotate and save DocuWorks (`.xdw`) documents anywhere: Mac, Linux, phone, browser.**
 An open-source engine, editor and format specification for FUJIFILM (Fuji Xerox)
@@ -11,7 +15,7 @@ DocuWorks files, built from scratch. Files never leave your device.
 Status: **v0.2, viewer + editor that saves back to `.xdw` / `.xbd` (developer preview).**
 Not affiliated with FUJIFILM Business Innovation.
 
-![The XDW editor](docs/images/editor.png)
+[![The XDW editor](docs/images/editor.png)](https://ezpzfile.com/xdw-editor)
 
 <sub>A sample quotation with a date stamp, highlighter, sticky note and a see-through approval seal. It looks the same in DocuWorks.</sub>
 
