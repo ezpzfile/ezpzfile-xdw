@@ -261,12 +261,43 @@ function sizePage(div, p) {
   div.style.height = Math.round(p.h * sc()) + "px";
 }
 
+/** Lay the page's text over the drawing as invisible, selectable text,
+ * placed where the drawing puts each line (as PDF viewers do). */
+function buildTextLayer(pg, d) {
+  const old = $(".textlayer", pg.div);
+  if (old) old.remove();
+  const k = sc();
+  const layer = el("div", { class: "textlayer" });
+  const ctx = (buildTextLayer.ctx ||= document.createElement("canvas").getContext("2d"));
+  let lastY = null;
+  for (const it of d.items) {
+    if (it[0] !== "t") continue;
+    const [, x, y, angle, size, sx, face, weight, italic, , , , , text, xs] = it;
+    if (!text.trim() || size * k < 2) continue;
+    const chars = Array.from(text);
+    ctx.font = fontFor(face, weight, italic, size);
+    // the width the drawing gives the line: up to the last character's place
+    // plus that character
+    const target = xs.length >= chars.length ? xs[chars.length - 1] + measure(ctx, chars[chars.length - 1]) : chars.length * size;
+    const natural = measure(ctx, text) || 1;
+    // a new line in the copied text when this item starts below the last one
+    if (lastY != null && Math.abs(y - lastY) > size * 0.5) layer.append(document.createElement("br"));
+    lastY = y;
+    const span = el("span", { text });
+    span.style.font = fontFor(face, weight, italic, size * k);
+    span.style.transform = `translate(${x * k}px, ${y * k}px) rotate(${-(angle || 0)}deg) scale(${(sx || 1) * target / natural}, 1) translateY(-0.86em)`;
+    layer.append(span);
+  }
+  pg.canvas.after(layer);
+}
+
 async function drawPage(i, force = false) {
   const pg = S.pages[i];
   if (!pg || pg.busy || (pg.drawn && !force)) return;
   pg.busy = true;
   try {
-    await renderTo(i, pg.canvas, sc());
+    const d = await renderTo(i, pg.canvas, sc());
+    buildTextLayer(pg, d);
     S.ed.forget(i);
     pg.drawn = true;
   } catch (e) {
@@ -487,6 +518,12 @@ function bindPage(div, i) {
     const o = S.info[i].objects[k];
     div.setPointerCapture(e.pointerId);
     drag = { kind: handle ? "resize" : "move", h: handle && handle.dataset.h, u0: u, v0: v, o: { ...o }, k, moved: false };
+  });
+  div.addEventListener("mousedown", (e) => {
+    // on an annotation (or with a drawing tool) a drag moves or draws: no text selection
+    if (e.button !== 0 || !S.ed || e.target.closest(".textedit")) return;
+    const [u, v] = pos(e);
+    if (S.tool !== "select" || objAt(i, u, v) >= 0 || e.target.closest(".selbox")) e.preventDefault();
   });
   div.addEventListener("pointermove", (e) => {
     if (!drag) return;
@@ -835,6 +872,91 @@ async function savePdf(name) {
   }
 }
 
+// ------------------------------------------------------------------ find
+/** Text nodes of a page's text layer, with where each starts in the joined text. */
+function layerText(layer) {
+  const nodes = [];
+  let text = "";
+  for (const span of layer.querySelectorAll("span")) {
+    const t = span.firstChild;
+    if (!t) continue;
+    nodes.push({ t, at: text.length });
+    text += t.data;
+  }
+  return { nodes, text };
+}
+
+const fold = (s) => s.normalize("NFKC").toLowerCase();
+
+/** Every match of the query on page i: [start, end] in the layer text. */
+async function pageMatches(i, q) {
+  const pg = S.pages[i];
+  if (!pg) return [];
+  // pages not drawn yet: ask the engine first, draw only when the text is there
+  if (!pg.drawn && !fold(S.ed.text(i).replace(/\s+/g, "")).includes(fold(q).replace(/\s+/g, ""))) return [];
+  if (!pg.drawn) await drawPage(i);
+  const layer = $(".textlayer", pg.div);
+  if (!layer) return [];
+  const { text } = layerText(layer);
+  const hay = fold(text), needle = fold(q);
+  const out = [];
+  for (let k = hay.indexOf(needle); k >= 0 && needle; k = hay.indexOf(needle, k + 1)) out.push([k, k + needle.length]);
+  return out;
+}
+
+function selectMatch(i, [a, b]) {
+  const layer = $(".textlayer", S.pages[i].div);
+  const { nodes } = layerText(layer);
+  const at = (pos) => {
+    let n = nodes[0];
+    for (const x of nodes) if (x.at <= pos) n = x;
+    return [n.t, Math.min(pos - n.at, n.t.data.length)];
+  };
+  const r = document.createRange();
+  r.setStart(...at(a));
+  r.setEnd(...at(b));
+  const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  const box = r.getBoundingClientRect(), sc = $("#scroller"), sb = sc.getBoundingClientRect();
+  if (box.top < sb.top + 40 || box.bottom > sb.bottom - 40) sc.scrollBy({ top: box.top - sb.top - sb.height / 3 });
+  S.cur = i; markCurrent(); updateStatus();
+}
+
+/** Go to the next (dir 1) or previous (-1) match, page by page from the current one. */
+async function findNext(dir) {
+  const q = $("#find-q").value;
+  if (!S.ed || !q.trim()) { $("#find-n").textContent = ""; return; }
+  const f = S.find && S.find.q === q ? S.find : (S.find = { q, p: S.cur, k: -1 });
+  const n = S.info.length;
+  for (let step = 0; step <= n; step++) {
+    const i = ((f.p + dir * step) % n + n) % n;
+    const m = await pageMatches(i, q);
+    if (!m.length) continue;
+    let k;
+    if (step === 0 && f.k >= 0) { k = f.k + dir; if (k < 0 || k >= m.length) continue; }
+    else k = dir > 0 ? 0 : m.length - 1;
+    f.p = i; f.k = k;
+    selectMatch(i, m[k]);
+    $("#find-n").textContent = `${k + 1} / ${m.length}（${i + 1}ページ）`;
+    return;
+  }
+  $("#find-n").textContent = "見つかりません";
+}
+
+function openFind() {
+  if (!S.ed) return;
+  $("#findbar").hidden = false;
+  const sel = getSelection().toString().trim();
+  if (sel && sel.length < 60) $("#find-q").value = sel;
+  $("#find-q").select();
+  $("#find-q").focus();
+}
+
+function closeFind() {
+  $("#findbar").hidden = true;
+  S.find = null;
+  $("#find-n").textContent = "";
+}
+
 function saveText(name) {
   const t = S.info.map((_, i) => S.ed.text(i)).join("\n\f\n");
   download(new TextEncoder().encode(t), (name || S.name) + ".txt", "text/plain");
@@ -1168,6 +1290,8 @@ function buildMenus() {
       ["やり直し", MOD + "Y", redo, () => S.ed && S.ed.canRedo()],
       null,
       ["削除", "Delete", deleteSelected, () => !!S.sel],
+      null,
+      ["文書内を検索…", MOD + "F", () => openFind()],
     ]],
     ["表示", "V", [
       ["拡大", MOD + "+", () => rezoom(S.zoom * 1.2)],
@@ -1361,6 +1485,17 @@ function toast(msg, ms = 2600) {
 
 function bindChrome() {
   $("#fileinput").addEventListener("change", (e) => { const f = e.target.files[0]; if (f) openFile(f); e.target.value = ""; });
+  $("#find-prev").innerHTML = ic("chevron-up");
+  $("#find-next").innerHTML = ic("chevron-down");
+  $("#find-close").innerHTML = ic("x");
+  $("#find-prev").addEventListener("click", () => findNext(-1));
+  $("#find-next").addEventListener("click", () => findNext(1));
+  $("#find-close").addEventListener("click", closeFind);
+  $("#find-q").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); findNext(e.shiftKey ? -1 : 1); }
+    else if (e.key === "Escape") { e.preventDefault(); closeFind(); }
+  });
+  $("#find-q").addEventListener("input", () => { S.find = null; $("#find-n").textContent = ""; });
   $("#welcome-open").addEventListener("click", () => $("#fileinput").click());
   $("#binder-add").innerHTML = ic("plus");
   $("#binder-add").addEventListener("click", pickBinderAdd);
@@ -1392,6 +1527,17 @@ function bindChrome() {
     if (mod && k === "o") { e.preventDefault(); $("#fileinput").click(); }
     else if (mod && k === "s") { e.preventDefault(); e.shiftKey ? saveAs() : saveXdw(); }
     else if (mod && k === "p") { e.preventDefault(); printDoc(); }
+    else if (mod && k === "f" && S.ed) { e.preventDefault(); openFind(); }
+    else if (mod && k === "a" && S.ed) {
+      // the text of the current page
+      const layer = S.pages[S.cur] && $(".textlayer", S.pages[S.cur].div);
+      if (layer && layer.textContent) {
+        e.preventDefault();
+        const r = document.createRange();
+        r.selectNodeContents(layer);
+        const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      }
+    }
     else if (mod && k === "z") { e.preventDefault(); e.shiftKey ? redo() : undo(); }
     else if (mod && k === "y") { e.preventDefault(); redo(); }
     else if (mod && (k === "+" || k === "=")) { e.preventDefault(); rezoom(S.zoom * 1.2); }

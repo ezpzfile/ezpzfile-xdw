@@ -190,7 +190,11 @@ dialog td:first-child { color: var(--ink-500); white-space: nowrap; }
 }
 
 /* ---------- document (XDW) ---------- */
-#center { display: grid; grid-template-rows: 1fr; min-width: 0; min-height: 0; background: var(--bg); }
+#center { display: grid; grid-template-rows: 1fr; min-width: 0; min-height: 0; background: var(--bg); position: relative; }
+#findbar { position: absolute; top: 10px; right: 22px; z-index: 30; display: flex; align-items: center; gap: 2px; background: var(--surface, #fff); border-radius: var(--r-lg, 10px); padding: 4px 4px 4px 10px; box-shadow: 0 6px 20px rgba(11, 16, 32, .14), 0 0 0 1px rgba(11, 16, 32, .06); }
+#findbar[hidden] { display: none; }
+#findbar input { border: 0; outline: none; font: inherit; font-size: 13px; width: 220px; background: none; }
+#findbar .lab { font-size: 12px; color: var(--ink-500); min-width: 56px; text-align: right; padding-right: 4px; }
 #scroller { overflow: auto; position: relative; outline: none; }
 #pages { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 28px 28px 56px; min-width: max-content; }
 .page { position: relative; background: #fff; box-shadow: 0 1px 3px rgba(11, 16, 32, .08), 0 0 0 1px rgba(11, 16, 32, .04); border-radius: 2px; flex: none; touch-action: none; }
@@ -198,6 +202,11 @@ dialog td:first-child { color: var(--ink-500); white-space: nowrap; }
 .page .no { position: absolute; left: calc(100% + 10px); top: 0; color: var(--ink-500); font-size: 11px; font-variant-numeric: tabular-nums; }
 .page.tool-draw { cursor: crosshair; }
 .page.tool-text { cursor: text; }
+/* the page's own text, invisible, on top of the drawing: select, copy, find */
+.textlayer { position: absolute; inset: 0; overflow: hidden; line-height: 1; pointer-events: none; }
+.textlayer span { position: absolute; left: 0; top: 0; white-space: pre; color: transparent; transform-origin: 0 0; cursor: text; pointer-events: auto; }
+.textlayer span::selection { background: rgba(37, 99, 235, .28); color: transparent; }
+.page.tool-draw .textlayer span, .page.tool-text .textlayer span { pointer-events: none; }
 .selbox { position: absolute; border: 1.5px solid var(--brand-500); border-radius: 2px; pointer-events: none; box-shadow: 0 0 0 3px rgba(1, 85, 255, .12); }
 .selbox .h { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; background: #fff; border: 1.5px solid var(--brand-500); border-radius: 2px; pointer-events: auto; }
 .selbox .h.nw { left: 0; top: 0; cursor: nwse-resize; } .selbox .h.ne { left: 100%; top: 0; cursor: nesw-resize; }
@@ -258,6 +267,13 @@ dialog td:first-child { color: var(--ink-500); white-space: nowrap; }
       <ul id="pagelist"></ul>
     </aside>
     <section id="center">
+      <div id="findbar" hidden>
+        <input id="find-q" type="search" placeholder="文書内を検索" aria-label="文書内を検索">
+        <span id="find-n" class="lab"></span>
+        <button class="ib" id="find-prev" title="前を検索 (Shift+Enter)"></button>
+        <button class="ib" id="find-next" title="次を検索 (Enter)"></button>
+        <button class="ib" id="find-close" title="閉じる (Esc)"></button>
+      </div>
       <div id="scroller" tabindex="-1">
         <div id="welcome"><div class="card">
           <h2>DocuWorks 文書 (.xdw) を開く</h2>
