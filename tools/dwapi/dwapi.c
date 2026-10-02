@@ -3,6 +3,9 @@
  *   dwapi make   FILE            add a date stamp, a sticky note (with text) and a text box to page 1, save
  *   dwapi render FILE PAGE OUT   page as an image file (DocuWorks draws it)
  *   dwapi addimg FILE IMAGE X Y  add a picture annotation from an image file to page 1, save
+ *   dwapi move FILE PAGE N X Y [W H]   move (and size) annotation N, save
+ *   dwapi protect IN OUT TYPE OPENPW [FULLPW PERM]   password-protect a copy (TYPE: 1, 3 = 128-bit, 7 = 256-bit)
+ *   dwapi protinfo FILE           protection type and permissions
  * Strings are Shift_JIS (code page 932). */
 #include <windows.h>
 #include <stdio.h>
@@ -20,6 +23,10 @@ typedef struct { int nSize, nAnnotationType, nReserved1, nReserved2; } AA_INIT;
 typedef struct { AA_INIT common; int nWidth, nHeight; } AA_WH;
 typedef struct { AA_INIT common; int nWidth; } AA_W;
 typedef struct { int nSize, nDpi, nColor; } IMAGE_OPTION;
+/* XDW_SECURITY_OPTION_PSWD (XDW_SIZEOF_PSWD = 256) and XDW_PROTECT_OPTION */
+typedef struct { int nSize, nPermission; char szOpenPswd[256], szFullAccessPswd[256]; char *lpszComment; } SEC_PSWD;
+typedef struct { int nSize, nAuthMode; } PROTECT_OPTION;
+typedef struct { int nSize, nProtectType, nPermission; } PROTECTION_INFO;
 
 typedef int (__stdcall *pOpen)(const char *, HDOC *, OPEN_MODE_EX *);
 typedef int (__stdcall *pClose)(HDOC, void *);
@@ -79,6 +86,26 @@ int main(int argc, char **argv) {
     if (argc < 3) { fprintf(stderr, "usage: dwapi info|make|render FILE ...\n"); return 1; }
     dll = LoadLibraryA("xdwapi.dll");
     if (!dll) { fprintf(stderr, "cannot load xdwapi.dll (%lu)\n", GetLastError()); return 2; }
+    if (strcmp(argv[1], "protect") == 0 && argc >= 6) {
+        typedef int (__stdcall *pProtect)(const char *, const char *, int, void *, void *);
+        pProtect protect = fn("XDW_ProtectDocument");
+        SEC_PSWD sp; memset(&sp, 0, sizeof sp); sp.nSize = sizeof sp;
+        sp.nPermission = argc >= 8 ? (int)strtol(argv[7], NULL, 0) : 0;
+        strncpy(sp.szOpenPswd, argv[5], 255);
+        if (argc >= 7 && strcmp(argv[6], "-")) strncpy(sp.szFullAccessPswd, argv[6], 255);
+        PROTECT_OPTION po = { sizeof po, 1 };
+        int rr = protect(argv[2], argv[3], atoi(argv[4]), &sp, &po);
+        printf("protect %d (%08x)\n", rr, rr);
+        return rr < 0 ? 4 : 0;
+    }
+    if (strcmp(argv[1], "protinfo") == 0) {
+        typedef int (__stdcall *pProtInfo)(const char *, PROTECTION_INFO *, void *);
+        pProtInfo pi = fn("XDW_GetProtectionInformation");
+        PROTECTION_INFO info = { sizeof info, 0, 0 };
+        int rr = pi(argv[2], &info, NULL);
+        printf("protinfo %d type %d permission %#x\n", rr, info.nProtectType, info.nPermission);
+        return 0;
+    }
     pOpen open = fn("XDW_OpenDocumentHandle");
     pClose close = fn("XDW_CloseDocumentHandle");
     int edit = strcmp(argv[1], "make") == 0 || strcmp(argv[1], "stampvar") == 0 || strcmp(argv[1], "addimg") == 0 || strcmp(argv[1], "move") == 0;
