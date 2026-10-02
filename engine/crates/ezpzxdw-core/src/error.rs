@@ -8,6 +8,10 @@ pub enum Error {
     Corrupt(String),
     /// A feature this version does not handle.
     Unsupported(String),
+    /// The document is protected (password or certificate): its entries and
+    /// properties are encrypted. DocuWorks can remove the protection for
+    /// someone who knows the password.
+    Protected,
 }
 
 impl fmt::Display for Error {
@@ -16,6 +20,7 @@ impl fmt::Display for Error {
             Error::NotXdw(s) => write!(f, "not a DocuWorks file: {s}"),
             Error::Corrupt(s) => write!(f, "damaged file: {s}"),
             Error::Unsupported(s) => write!(f, "unsupported: {s}"),
+            Error::Protected => write!(f, "protected: the document is encrypted (password or certificate); remove the protection in DocuWorks first"),
         }
     }
 }

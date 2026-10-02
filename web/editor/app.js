@@ -839,7 +839,14 @@ async function openFile(file) {
     $("#scroller").scrollTop = 0;
   } catch (e) {
     console.error(e);
-    toast("開けませんでした: " + (e.message || e));
+    const msg = String(e.message || e);
+    if (msg.startsWith("protected")) {
+      // the file is encrypted: DocuWorks itself removes the protection for
+      // someone who knows the password; this editor never handles passwords
+      confirmBox("保護された文書", "この文書はパスワードまたは電子証明書で保護されています。DocuWorks で開いてセキュリティを解除し、保存し直してから、もう一度開いてください。", false);
+      return;
+    }
+    toast("開けませんでした: " + msg);
   }
 }
 
@@ -1004,6 +1011,12 @@ async function askDiscard() {
   return r === "discard";
 }
 
+/** An engine error in words for the screen (protected documents get a hint). */
+function errText(e) {
+  const msg = String(e.message || e);
+  return msg.startsWith("protected") ? "保護された文書です（DocuWorks でセキュリティを解除してから使ってください）" : msg;
+}
+
 function confirmBox(title, text, withDiscard) {
   const d = $("#dlg-confirm");
   $("#cf-title").textContent = title;
@@ -1132,7 +1145,7 @@ async function insertFiles(files, at) {
       at += n; total += n;
     } catch (e) {
       console.error(e);
-      toast(`${f.name}: ${e.message || e}`, 5000);
+      toast(`${f.name}: ${errText(e)}`, 5000);
     }
   }
   if (!total) return;
@@ -1294,7 +1307,7 @@ async function pickBinderAdd() {
       const n = S.ed.addBinderDocs(at, new Uint8Array(await f.arrayBuffer()), f.name.replace(/\.(xdw|xbd)$/i, ""));
       at += n; added += n;
     } catch (e) {
-      toast(`${f.name}: ${e.message || e}`, 5000);
+      toast(`${f.name}: ${errText(e)}`, 5000);
     }
   }
   if (added) { refresh("all"); toast(`${added} 文書を追加しました`); }

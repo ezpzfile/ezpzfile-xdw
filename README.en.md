@@ -38,8 +38,12 @@ Signed documents open, and selecting a signature shows its information (an
 electronic seal or a certificate, the signing module, the version). Editing
 voids the signature, and the editor says so.
 
-Not yet: verifying that a signature still holds, opening password-protected
-documents, and adding signatures or passwords. See the [plan](docs/PLAN.en.md)
+Documents protected by a password or a certificate are reported as protected,
+with a note to remove the protection in DocuWorks first (this editor never
+handles passwords).
+
+Not yet: verifying that a signature still holds, and adding signatures or
+passwords. See the [plan](docs/PLAN.en.md)
 ([日本語](docs/PLAN.ja.md), [한국어](docs/PLAN.ko.md)).
 
 ## Editor

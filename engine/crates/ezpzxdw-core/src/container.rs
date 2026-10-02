@@ -27,6 +27,10 @@ pub const T_PROPERTIES: u8 = 0x63;
 pub const T_ENTRY: u8 = 0x64;
 pub const T_TRAILER: u8 = 0x68;
 pub const T_TRAILER_OLD: u8 = 0x65;
+/// A protected document (password or certificate) stores its properties and
+/// entries encrypted, under these tags instead of 0x63 / 0x64.
+pub const T_PROPERTIES_PROTECTED: u8 = 0x66;
+pub const T_ENTRY_PROTECTED: u8 = 0x67;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Trailer {
@@ -141,6 +145,9 @@ impl Container {
         let hf = header.children(b)?;
         let generation = tlv::find_uint(&hf, b, 0x82);
         let trailer = find_trailer(b)?;
+        if is_protected(b, &trailer) {
+            return Err(Error::Protected);
+        }
         let segments = scan_segments(b, header.end());
         Ok(Container {
             size: b.len(),
@@ -203,6 +210,21 @@ pub fn expanded_size(kind: Option<u64>, flag: Option<u64>, size: Option<u64>, st
     } else {
         None
     }
+}
+
+/// Is the document protected? Its first entry, or the block before the
+/// trailer, carries the encrypted tags.
+fn is_protected(b: &[u8], t: &Trailer) -> bool {
+    if let Some(&o) = t.offsets.first() {
+        if b.get(o as usize) == Some(&T_ENTRY_PROTECTED) {
+            return true;
+        }
+    }
+    (2..=6usize).any(|hdr| {
+        t.at.checked_sub(t.props_stored as usize + hdr)
+            .and_then(|s| tlv::read(b, s, b.len()).ok().filter(|x| x.tag == T_PROPERTIES_PROTECTED && x.end() == t.at))
+            .is_some()
+    })
 }
 
 /// The trailer, found from the end of the file.
@@ -335,4 +357,27 @@ pub fn parse_entry(b: &[u8], at: usize) -> Result<Entry> {
         body_range: (body.value, body.len),
         body: parsed,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn trailer(at: usize, offsets: Vec<u32>, props_stored: u32) -> Trailer {
+        Trailer { at, tag: T_TRAILER_OLD, count: offsets.len() as u32, offsets, checks: Vec::new(), unknown82: Vec::new(), props_expanded: 0, props_stored, check: 0, fields: Vec::new() }
+    }
+
+    /// Protected documents store entries under 0x67 and properties under
+    /// 0x66; plain ones under 0x64 and 0x63.
+    #[test]
+    fn protected_tags() {
+        // an entry, then a 4-byte properties block right before the trailer
+        let protected = [0x67, 0x02, 0xaa, 0xbb, 0x66, 0x04, 1, 2, 3, 4];
+        assert!(is_protected(&protected, &trailer(10, vec![0], 4)));
+        // only the properties block carries the tag
+        let props_only = [0x64, 0x02, 0xaa, 0xbb, 0x66, 0x04, 1, 2, 3, 4];
+        assert!(is_protected(&props_only, &trailer(10, vec![0], 4)));
+        let plain = [0x64, 0x02, 0xaa, 0xbb, 0x63, 0x04, 1, 2, 3, 4];
+        assert!(!is_protected(&plain, &trailer(10, vec![0], 4)));
+    }
 }

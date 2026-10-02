@@ -60,15 +60,15 @@ against the real viewer**.
 | See-through pictures | Done. The white parts show the text underneath. DocuWorks has no see-through picture annotation, so the picture is kept the way a metafile pasted from the clipboard is kept (an OLE Enhanced Metafile) whose drawing multiplies the picture with the page. It looks the same in DocuWorks 10, which can also move and resize it (spec 5.5) |
 | Opaque pictures | DocuWorks' picture annotation, as before. The properties panel switches a picture between the two. A picture with transparent parts (a PNG, say) goes in see-through |
 | Resizing pictures | Done (drag a corner) |
+| Recognizing protected documents | Done. A document protected by a password or a certificate is reported as protected rather than damaged, with a note to remove the protection in DocuWorks first. This editor never handles passwords |
 | Show signature information | Done. Selecting a signature shows its type (electronic seal or certificate), the signing module (`%smin`) and version (`%sigver`). Whether it still holds needs the DocuWorks API or verifying the certificate (not yet) |
 
 ## Next
 
-1. **Passwords**: make protected samples with the DocuWorks API, work out the scheme, and let someone who knows the password open the file (the body records are encrypted).
-2. **Verifying signatures**: check the certificate and show whether a signature still holds. Adding new signatures comes later.
-3. Extracting **attached original files (1306)**.
-4. Creating new binders (for now, only existing binders can be edited).
-5. The remaining annotation kinds such as markers and polygons (samples can be made with the
+1. **Verifying signatures**: check the certificate and show whether a signature still holds. Adding new signatures comes later.
+2. Extracting **attached original files (1306)**.
+3. Creating new binders (for now, only existing binders can be edited).
+4. The remaining annotation kinds such as markers and polygons (samples can be made with the
    DocuWorks API to match against).
 
 ## How it is checked

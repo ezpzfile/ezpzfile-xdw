@@ -38,6 +38,13 @@ INTEGER style): `00 c0 13` is 49171, `a1 b1 ae` is the 32-bit value `ffa1b1ae`
 …
 ```
 
+A document **protected** by a password or a certificate keeps the same
+header and trailer, but its entries and properties are encrypted and stored
+under tags **0x67** and **0x66** instead of 0x64 and 0x63 [made with the
+DocuWorks API]. The engine reports such a file as protected and does not
+read it further; DocuWorks itself removes the protection for someone who
+knows the password.
+
 A save never rewrites earlier bytes. It appends a segment holding the entries
 that are new, a complete new properties block, and a trailer. The **last
 trailer is the state of the document**; earlier ones are history.
@@ -416,4 +423,4 @@ pictures, outsourced definitions) and renumbers the references.
 - 8045 custom annotation data (`%annotation_customdata`)
 - markers, polygons, received stamps as Desk writes them
 - verifying a signature's certificate (the module and version are read, 4.5)
-- passwords (the body records are encrypted; opening needs the password)
+- protected documents are recognized, not read (2, below the layout)
