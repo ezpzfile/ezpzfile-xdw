@@ -11,12 +11,16 @@
 :root {
   --brand-50: #e8f0ff; --brand-100: #cfe0ff; --brand-300: #6fa5ff; --brand-500: #0155ff; --brand-600: #0146d6; --brand-700: #0139aa;
   --ink-50: #f4f6fb; --ink-100: #e3e7ef; --ink-300: #a8b0c4; --ink-500: #66708c; --ink-700: #364059; --ink-900: #131a2e; --ink-950: #0b1020;
-  --bg: #e7eaf1; --card: #fff; --danger: #ef4444; --warn: #f59e0b; --signal: #00b894;
+  --bg: #e6ebf3; --card: #fff; --danger: #ef4444; --warn: #f59e0b; --signal: #00b894;
   --hair: #0b10200f;
   --r-sm: 4px; --r-md: 6px; --r-lg: 8px; --r-xl: 12px; --r-card: 16px;
   --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", "Segoe UI", sans-serif;
   --sel: rgba(1, 85, 255, .22);
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  --shadow-drop: 0 0 0 1px rgb(11 16 32 / .07), 0 12px 32px -10px rgb(11 16 32 / .22);
 }
+/* until the words are in the chosen language (see editor/i18n.js) */
+html[lang="en"]:not(.i18n) #app { visibility: hidden; }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--card); color: var(--ink-950); font: 13px/1.45 var(--font); -webkit-font-smoothing: antialiased; }
@@ -25,15 +29,17 @@ button { cursor: pointer; }
 svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 #app { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; height: 100vh; height: 100dvh; }
 
-/* ---------- top bar: brand · title · menus · actions ---------- */
-#topbar { display: flex; align-items: center; gap: 4px; height: 48px; overflow: hidden; padding: 0 10px 0 12px; border-bottom: 1px solid var(--ink-100); background: var(--card); min-width: 0; }
-#logo { width: 28px; height: 28px; flex: none; margin-right: 6px; }
-#apptitle { font-size: 15px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
-#docwrap { display: flex; align-items: center; gap: 6px; padding: 0 10px; margin-right: 6px; border-left: 1px solid var(--ink-100); color: var(--ink-500); white-space: nowrap; min-width: 0; max-width: 260px; }
+/* ---------- top bar: the same bar as the HWP and PDF editors on ezpzfile.com ----------
+   menu button (in a narrow frame) · logo · name · menus · file name · undo redo | open print share save */
+#topbar { position: relative; z-index: 65; display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 12px; border-bottom: 1px solid var(--ink-100); background: var(--card); min-width: 0; }
+#ez-home { display: inline-grid; place-items: center; flex: none; margin-right: 2px; color: inherit; }
+#logo { width: 28px; height: 28px; display: block; border-radius: 7px; }
+#apptitle { flex: none; font-size: 14px; font-weight: 700; letter-spacing: -.02em; margin-right: 4px; white-space: nowrap; }
+#docwrap { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 280px; font-size: 13px; color: var(--ink-500); white-space: nowrap; }
 #docname { overflow: hidden; text-overflow: ellipsis; }
-#moddot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand-500); display: none; flex: none; }
+#moddot { width: 6px; height: 6px; border-radius: 999px; background: var(--warn); display: none; flex: none; }
 #topbar.modified #moddot { display: inline-block; }
-#menubar { display: flex; align-items: center; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+#menubar { display: flex; align-items: center; flex: 0 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 #menubar::-webkit-scrollbar { display: none; }
 .menu { position: relative; }
 .menu > button { border: 0; background: none; padding: 6px 9px; border-radius: var(--r-md); color: var(--ink-700); font-weight: 500; white-space: nowrap; }
@@ -49,19 +55,42 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
 .drop button:hover, .drop button.active { background: var(--ink-50); }
 .drop button:disabled { color: var(--ink-300); background: none; cursor: default; }
 .drop hr { border: 0; border-top: 1px solid var(--ink-100); margin: 5px 8px; }
-.grow { flex: 1; }
+.grow { flex: 1 1 auto; min-width: 8px; }
+#actions { display: flex; align-items: center; gap: 4px; flex: none; }
+.hib { width: 32px; height: 32px; display: inline-grid; place-items: center; border: 0; border-radius: 9px; background: none; color: var(--ink-500); padding: 0; flex: none; transition: background-color .15s var(--ease), color .15s var(--ease); }
+.hib:hover:not(:disabled) { background: var(--ink-50); color: var(--ink-950); }
+.hib:disabled { opacity: .4; cursor: default; }
+.hib svg.i { width: 18px; height: 18px; }
+.hbtn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: 9px; background: none; color: var(--ink-700); font-size: 13px; font-weight: 600; white-space: nowrap; flex: none; transition: background-color .15s var(--ease), color .15s var(--ease); }
+.hbtn svg.i { width: 16px; height: 16px; }
+.hbtn:hover:not(:disabled) { background: var(--ink-50); color: var(--ink-950); }
+.hdiv { width: 1px; height: 20px; background: var(--ink-100); margin: 0 4px; flex: none; }
+#ez-nav, #ez-share { display: none; }
+html.embedded #ez-share { display: inline-grid; }
+html.embedded #ez-home { display: none; }
+#ez-save { position: relative; display: inline-flex; margin-left: 4px; flex: none; }
+#ez-save > button { border: 0; background: var(--brand-500); color: #fff; height: 32px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; transition: background-color .15s var(--ease); }
+#ez-save > button:hover:not(:disabled) { background: var(--brand-600); }
+#ez-save > button:disabled { opacity: .45; cursor: default; }
+#ez-save .main { padding: 0 12px; border-radius: 9px 0 0 9px; }
+#ez-save .main svg.i { width: 16px; height: 16px; }
+#ez-save .more { width: 28px; padding: 0; justify-content: center; border-radius: 0 9px 9px 0; box-shadow: inset 1px 0 0 rgb(255 255 255 / .28); }
+#ez-save .more svg.i { width: 14px; height: 14px; }
+#ez-save-menu { display: none; position: absolute; top: calc(100% + 6px); right: 0; min-width: 220px; padding: 6px; border-radius: 14px; background: var(--card); box-shadow: var(--shadow-drop); z-index: 70; }
+#ez-save.open #ez-save-menu { display: block; }
+#ez-save-menu button { display: flex; align-items: center; gap: 10px; width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 9px; background: none; color: var(--ink-900); font-size: 13px; text-align: left; white-space: nowrap; }
+#ez-save-menu button:hover:not(:disabled) { background: var(--ink-50); }
+#ez-save-menu button:disabled { color: var(--ink-300); cursor: default; }
+.fmt { display: inline-grid; place-items: center; min-width: 42px; height: 20px; border-radius: 6px; background: var(--ink-50); color: var(--ink-500); font-size: 10.5px; font-weight: 700; letter-spacing: .02em; }
+.fmt:empty { background: none; }
+.menu-sep { height: 1px; margin: 6px 4px; background: var(--ink-100); }
+/* without a document the tools wait (only New and Open work) */
+#app.nodoc #toolbar, #app.nodoc #statusbar > * { opacity: .45; pointer-events: none; }
+.vsep { width: 1px; height: 20px; background: var(--ink-100); margin: 0 6px; flex: none; }
 .ib { width: 34px; height: 34px; display: inline-grid; place-items: center; border: 0; border-radius: var(--r-md); background: none; color: var(--ink-700); padding: 0; flex: none; }
 .ib:hover { background: var(--ink-50); color: var(--ink-950); }
 .ib:disabled { color: var(--ink-300); background: none; cursor: default; }
 .ib.on { background: var(--brand-50); color: var(--brand-500); }
-.vsep { width: 1px; height: 20px; background: var(--ink-100); margin: 0 6px; flex: none; }
-.tbtn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border: 0; border-radius: var(--r-md); background: none; color: var(--ink-900); font-weight: 600; white-space: nowrap; }
-.tbtn:hover { background: var(--ink-50); }
-.split { display: inline-flex; border-radius: var(--r-md); overflow: hidden; margin-left: 4px; flex: none; }
-.split button { border: 0; background: var(--brand-500); color: #fff; height: 34px; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
-.split button:hover { background: var(--brand-600); }
-.split .main { padding: 0 12px 0 10px; }
-.split .more { padding: 0 8px; border-left: 1px solid rgba(255, 255, 255, .35); }
 
 /* ---------- toolbar rows ---------- */
 .bar { display: flex; align-items: center; gap: 2px; height: 46px; padding: 0 10px; border-bottom: 1px solid var(--ink-100); background: var(--card); overflow-x: auto; scrollbar-width: none; }
@@ -78,7 +107,7 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
 .colorbtn input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
 
 /* ---------- main area ---------- */
-#main { display: grid; grid-template-columns: 200px minmax(0, 1fr) 272px; min-height: 0; }
+#main { position: relative; display: grid; grid-template-columns: 200px minmax(0, 1fr) 272px; min-height: 0; }
 #main.no-jump { grid-template-columns: 0 minmax(0, 1fr) 272px; }
 #main.no-palette { grid-template-columns: 200px minmax(0, 1fr) 0; }
 #main.no-jump.no-palette { grid-template-columns: 0 minmax(0, 1fr) 0; }
@@ -169,17 +198,53 @@ dialog td:first-child { color: var(--ink-500); white-space: nowrap; }
 #toast.show { opacity: 1; }
 #printarea { display: none; }
 
+/* ---------- empty screen: no document yet (same as the HWP editor) ---------- */
+#ez-empty { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; overflow-y: auto; padding: 24px; background: var(--bg); }
+.ez-empty-stack { display: flex; flex-direction: column; gap: 16px; width: min(100%, 520px); margin-block: auto; }
+.ez-drop { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 280px; padding: 32px 24px; border: 2px dashed #cdd4e2; border-radius: 20px; background: rgb(255 255 255 / .55); text-align: center; transition: border-color .2s var(--ease), background-color .2s var(--ease); }
+#ez-empty.drag-over .ez-drop { border-color: var(--brand-500); background: var(--brand-50); }
+.ez-drop-icon { width: 48px !important; height: 48px !important; color: var(--ink-300); stroke-width: 1.5 !important; }
+.ez-drop-title { margin: 18px 0 0; font-size: 17px; font-weight: 700; letter-spacing: -.02em; color: var(--ink-900); }
+.ez-drop-sub { margin: 8px 0 0; font-size: 13.5px; line-height: 1.55; color: var(--ink-500); }
+.ez-drop-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 22px; }
+.ez-drop-actions button { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 18px; border: 0; border-radius: 12px; font-size: 14px; font-weight: 600; transition: background-color .15s var(--ease), box-shadow .15s var(--ease); }
+.ez-drop-actions button svg.i { width: 16px; height: 16px; }
+.ez-drop-actions .primary { background: var(--brand-500); color: #fff; }
+.ez-drop-actions .primary:hover { background: var(--brand-600); }
+.ez-drop-actions .outline { background: #fff; color: var(--ink-700); box-shadow: inset 0 0 0 1px var(--ink-100); }
+.ez-drop-actions .outline:hover { color: var(--ink-950); box-shadow: inset 0 0 0 1px var(--ink-300); }
+.ez-drop-safe { display: inline-flex; align-items: center; gap: 6px; margin: 22px 0 0; font-size: 12.5px; color: var(--ink-500); }
+.ez-drop-safe svg.i { width: 14px; height: 14px; color: var(--signal); }
+.ez-reads { padding: 12px 16px 4px; border: 1px solid var(--ink-100); border-radius: 14px; background: rgb(255 255 255 / .55); }
+.ez-reads-title { margin: 0; font-size: 12.5px; font-weight: 600; color: var(--ink-500); }
+.ez-reads ul { margin: 4px 0 0; padding: 0; list-style: none; }
+.ez-reads li + li { border-top: 1px solid var(--ink-100); }
+.ez-reads a { display: flex; align-items: center; gap: 10px; padding: 10px 0; font-size: 13.5px; color: var(--ink-700); text-decoration: none; }
+.ez-reads a:hover { color: var(--brand-600); }
+.ez-reads a span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ez-reads a svg.i { width: 16px; height: 16px; color: var(--ink-300); }
+
+@media (max-width: 1100px) {
+  #docwrap { display: none !important; }
+  #open-btn span { display: none; }
+  #open-btn { width: 32px; padding: 0; }
+}
 @media (max-width: 900px) {
   #main, #main.no-jump, #main.no-palette, #main.no-jump.no-palette { grid-template-columns: minmax(0, 1fr); }
-  #jump, #palette, #rail, #docwrap, .hide-narrow { display: none !important; }
-  #apptitle { font-size: 14px; }
+  #jump, #palette, #rail, .hide-narrow { display: none !important; }
   #st-fit, #statusbar .vsep { display: none; }
-  #actions .vsep { display: none; }
 }
-@media (max-width: 520px) {
-  #apptitle { display: none; }
-  #menubar { display: none; }
-  .split .main span { display: none; }
+@media (max-width: 767px) {
+  #topbar { gap: 2px; padding: 0 6px; height: 52px; }
+  html.embedded #ez-nav { display: inline-grid; }
+  html.embedded #ez-home { display: inline-grid; width: 32px; height: 32px; }
+  #ez-home #logo { width: 26px; height: 26px; }
+  #apptitle, #print-btn, .hdiv, .grow { display: none; }
+  #menubar { flex: 1 1 auto; }
+  #actions { gap: 2px; }
+  #ez-save .main span { display: none; }
+  #ez-save .main { width: 36px; padding: 0; justify-content: center; }
+  .ez-drop { min-height: 240px; padding: 28px 18px; }
 }
 @media print {
   @page { size: A4; margin: 0; }
@@ -195,6 +260,9 @@ dialog td:first-child { color: var(--ink-500); white-space: nowrap; }
 #findbar[hidden] { display: none; }
 #findbar input { border: 0; outline: none; font: inherit; font-size: 13px; width: 220px; background: none; }
 #findbar .lab { font-size: 12px; color: var(--ink-500); min-width: 56px; text-align: right; padding-right: 4px; }
+@media (max-width: 767px) { #findbar { left: 8px; right: 8px; } #findbar input { width: auto; flex: 1; min-width: 0; } }
+#findbar .lab { white-space: nowrap; }
+#jump .panelhead > span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #scroller { overflow: auto; position: relative; outline: none; }
 #pages { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 28px 28px 56px; min-width: max-content; }
 .page { position: relative; background: #fff; box-shadow: 0 1px 3px rgba(11, 16, 32, .08), 0 0 0 1px rgba(11, 16, 32, .04); border-radius: 2px; flex: none; touch-action: none; }
@@ -234,10 +302,6 @@ dialog td:first-child { color: var(--ink-500); white-space: nowrap; }
 #props .empty { color: var(--ink-500); font-size: 12px; padding: 14px; }
 #props textarea.field { min-height: 90px; resize: vertical; font-family: inherit; }
 .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink-300); font-size: 12px; }
-#welcome { display: grid; place-items: center; height: 100%; }
-#welcome .card { background: var(--card); border-radius: var(--r-card); padding: 32px 36px; box-shadow: 0 1px 3px rgba(11, 16, 32, .08); text-align: center; display: grid; gap: 14px; max-width: 420px; }
-#welcome h2 { margin: 0; font-size: 18px; }
-#welcome p { margin: 0; color: var(--ink-500); }
 #pagelist li.doc { display: flex; align-items: center; justify-items: start; gap: 6px; min-height: 30px; padding: 4px 8px; margin-top: 6px; border-radius: var(--r-md); background: var(--ink-50); color: var(--ink-700); font-weight: 600; font-size: 12px; }
 #pagelist li.doc .dn { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; }
 #pagelist li.doc .dn > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -253,11 +317,12 @@ dialog td:first-child { color: var(--ink-500); white-space: nowrap; }
 <body>
 <div id="app">
   <header id="topbar">
-    <svg id="logo" viewBox="0 0 225 225" aria-label="EZPZ File"><path d="M0 225H225V56.5045L169.5 0H0V225Z" fill="#0155FF"/><path d="M115.788 164.774H123.344V157.218H130.901V149.662H138.457V142.105H146.014V134.549H115.788V119.436H168.683V142.105H161.126V149.662H153.57V157.218H146.014V164.774H168.683V179.887H115.788V164.774Z" fill="#fff"/><path d="M70.43 164.774H93.0992V134.549H70.43V164.774ZM70.43 126.992H77.9864V119.436H100.656V126.992H108.212V172.331H100.656V179.887H70.43V195H55.3171V119.436H70.43V126.992Z" fill="#fff"/><path d="M115.788 94.8612H123.344V87.3048H130.901V79.7484H138.457V72.192H146.014V64.6356H115.788V49.5227H168.683V72.192H161.126V79.7484H153.57V87.3048H146.014V94.8612H168.683V109.974H115.788V94.8612Z" fill="#fff"/><path d="M55.3171 57.0791H62.8735V49.5227H100.656V57.0791H108.212V87.3048H70.43V94.8612H108.212V102.418H100.656V109.974H62.8735V102.418H55.3171V57.0791ZM70.43 72.192H93.0992V64.6356H70.43V72.192Z" fill="#fff"/><path d="M168 55V0L224 55H168Z" fill="#00C8FF"/></svg>
+    <button type="button" id="ez-nav" class="hib" aria-label="サイトのメニュー"></button>
+    <a id="ez-home" target="_top" aria-label="EZPZ File"><svg id="logo" viewBox="0 0 225 225" aria-label="EZPZ File"><path d="M0 225H225V56.5045L169.5 0H0V225Z" fill="#0155FF"/><path d="M115.788 164.774H123.344V157.218H130.901V149.662H138.457V142.105H146.014V134.549H115.788V119.436H168.683V142.105H161.126V149.662H153.57V157.218H146.014V164.774H168.683V179.887H115.788V164.774Z" fill="#fff"/><path d="M70.43 164.774H93.0992V134.549H70.43V164.774ZM70.43 126.992H77.9864V119.436H100.656V126.992H108.212V172.331H100.656V179.887H70.43V195H55.3171V119.436H70.43V126.992Z" fill="#fff"/><path d="M115.788 94.8612H123.344V87.3048H130.901V79.7484H138.457V72.192H146.014V64.6356H115.788V49.5227H168.683V72.192H161.126V79.7484H153.57V87.3048H146.014V94.8612H168.683V109.974H115.788V94.8612Z" fill="#fff"/><path d="M55.3171 57.0791H62.8735V49.5227H100.656V57.0791H108.212V87.3048H70.43V94.8612H108.212V102.418H100.656V109.974H62.8735V102.418H55.3171V57.0791ZM70.43 72.192H93.0992V64.6356H70.43V72.192Z" fill="#fff"/><path d="M168 55V0L224 55H168Z" fill="#00C8FF"/></svg></a>
     <span id="apptitle">XDW エディタ</span>
-    <span id="docwrap"><span id="moddot" title="未保存の変更"></span><span id="docname">文書を開いてください</span></span>
     <nav id="menubar" aria-label="メニュー"></nav>
     <span class="grow"></span>
+    <span id="docwrap" hidden><span id="docname"></span><span id="moddot" title="未保存の変更"></span></span>
     <span id="actions"></span>
   </header>
   <div id="toolbar" class="bar" aria-label="ツールバー"></div>
@@ -275,18 +340,30 @@ dialog td:first-child { color: var(--ink-500); white-space: nowrap; }
         <button class="ib" id="find-close" title="閉じる (Esc)"></button>
       </div>
       <div id="scroller" tabindex="-1">
-        <div id="welcome"><div class="card">
-          <h2>DocuWorks 文書 (.xdw) を開く</h2>
-          <p>ここにファイルをドロップするか、下のボタンから選んでください。ファイルはこのパソコンの中だけで処理されます。</p>
-          <div><button class="pbtn primary" id="welcome-open">ファイルを開く</button></div>
-        </div></div>
         <div id="pages" hidden></div>
       </div>
     </section>
     <aside id="palette" aria-label="プロパティ"><div class="panelhead">プロパティ</div><div id="props"></div></aside>
+    <div id="ez-empty">
+      <div class="ez-empty-stack">
+        <div class="ez-drop">
+          <span id="ez-drop-icon"></span>
+          <p class="ez-drop-title">DocuWorks 文書をここにドロップ</p>
+          <p class="ez-drop-sub">DocuWorks がなくても .xdw と .xbd を開いて、注釈を付けて保存できます。PDF にも書き出せます。</p>
+          <div class="ez-drop-actions">
+            <button type="button" class="primary" id="ez-empty-open"></button>
+          </div>
+          <p class="ez-drop-safe" id="ez-safe"></p>
+        </div>
+        <nav class="ez-reads" id="ez-reads" hidden>
+          <p class="ez-reads-title" id="ez-reads-title"></p>
+          <ul id="ez-reads-list"></ul>
+        </nav>
+      </div>
+    </div>
   </div>
   <footer id="statusbar">
-    <span class="it"><b id="st-page">-</b> / <b id="st-pages">-</b> ページ</span>
+    <span class="it" id="st-pos"></span>
     <span class="it hide-narrow" id="st-size"></span>
     <span class="it hide-narrow" id="st-note"></span>
     <span class="grow"></span>
@@ -364,6 +441,7 @@ dialog td:first-child { color: var(--ink-500); white-space: nowrap; }
 <script type="module">
 /*__EZPZXDW_GLUE__*/
 const WASM_B64 = "/*__EZPZXDW_WASM__*/";
+const WASM_URL = "/*__EZPZXDW_WASM_URL__*/";
 /*__EZPZXDW_APP__*/
 </script>
 </body>

@@ -57,6 +57,11 @@
 矢印（Shift で 1 cm）、Ctrl+Z / Ctrl+Y、Ctrl+S、Ctrl+Shift+S（PDF・テキストで保存）、Ctrl+P、Ctrl+F（検索）。
 開いている文書に PDF や画像をドロップすると、ページとして挿入されます。
 
+画面の言葉は日本語と英語があります。英語版は `web/dist/ezpzxdw-editor.en.html` で、どちらのファイルも
+`?lang=en` / `?lang=ja` で切り替えられます。ブラウザですぐ使うなら [ezpzfile.com/ja/xdw-editor](https://ezpzfile.com/ja/xdw-editor)。
+ほかのサイトに載せるときは `web/dist/ezpzxdw-editor.embed.html` に `web/pkg/` の `.wasm` の URL を入れて使います。
+同じサイトのページの枠（iframe）の中で開くと、`web/editor/host.js` の決まりでそのページとやり取りします。
+
 ## 本物の DocuWorks で確認
 
 `tools/dwview` は富士フイルムの無料ビューア DocuWorks Viewer Light を Wine で動かし、ファイルが開けるかを

@@ -56,6 +56,11 @@ DocuWorks가 확인하는 검사값, 드라이버 전용 그리기 기록 등 �
 화살표(Shift는 1cm), Ctrl+Z / Ctrl+Y, Ctrl+S, Ctrl+Shift+S(PDF·텍스트로 저장), Ctrl+P, Ctrl+F(찾기).
 열린 문서에 PDF나 그림을 끌어다 놓으면 쪽으로 들어갑니다.
 
+화면 글은 일본어와 영어가 있습니다. 영어판은 `web/dist/ezpzxdw-editor.en.html`이고, 어느 파일이든
+`?lang=en` / `?lang=ja`로 바꿀 수 있습니다. 브라우저에서 바로 쓰려면 [ezpzfile.com/xdw-editor](https://ezpzfile.com/xdw-editor).
+다른 사이트에 올릴 때는 `web/dist/ezpzxdw-editor.embed.html`에 `web/pkg/`의 `.wasm` 주소를 넣어 씁니다.
+같은 사이트의 틀(iframe) 안에서 열리면 `web/editor/host.js`에 적힌 약속대로 그 쪽과 말을 주고받습니다.
+
 ## 진짜 DocuWorks로 확인
 
 `tools/dwview`는 후지필름의 무료 뷰어 DocuWorks Viewer Light를 Wine에서 돌려, 파일이 열리는지 화면

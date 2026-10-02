@@ -63,6 +63,13 @@ Delete, arrows (Shift = 1 cm), Ctrl+Z / Ctrl+Y, Ctrl+S, Ctrl+Shift+S (save as
 PDF / text), Ctrl+P, Ctrl+F (search). Drop a PDF or a picture on an open document to insert it
 as pages.
 
+The screen comes in Japanese and English: `web/dist/ezpzxdw-editor.en.html` is the
+English one, and `?lang=en` / `?lang=ja` switches either file. To use it right away in a
+browser: [ezpzfile.com/xdw-editor](https://ezpzfile.com/xdw-editor). To put it on a site,
+use `web/dist/ezpzxdw-editor.embed.html` with the URL of the `.wasm` from `web/pkg/`
+filled in. Opened in a frame of a page on the same site, it talks to that page as
+`web/editor/host.js` describes.
+
 ## Checked against the real DocuWorks
 
 `tools/dwview` runs FUJIFILM's free DocuWorks Viewer Light under Wine and reports
