@@ -786,8 +786,17 @@ function renderProps() {
       el("button", { class: "pbtn" + (ob.seeThrough ? " on" : ""), text: "白を透かす", onclick: () => set(true) }),
       el("button", { class: "pbtn" + (ob.seeThrough ? "" : " on"), text: "透かさない", onclick: () => set(false) })));
     box.append(el("p", { class: "note", text: ob.seeThrough ? "白い部分から下の文字が見えます。DocuWorks でも同じに見えます（貼り付けた図として保存）。" : "白い部分も含めて不透明です（DocuWorks の画像注釈）。" }));
+  } else if (ob.kind === "signature") {
+    const sig = ob.signature;
+    if (sig) {
+      box.append(el("div", { class: "kv" },
+        el("span", { text: "署名の種類" }), el("b", { text: sig.stamp ? "電子印鑑" : "証明書（PKI）" }),
+        el("span", { text: "モジュール" }), el("b", { text: sig.module || "-" }),
+        ...(sig.version ? [el("span", { text: "バージョン" }), el("b", { text: sig.version })] : [])));
+    }
+    box.append(el("p", { class: "note", text: "署名です。ここでは動かしたり消したりできません。編集して保存すると署名は無効になります。有効性の確認は DocuWorks で行ってください。" }));
   } else if (ob.kind !== "page") {
-    box.append(el("p", { class: "note", text: ob.kind === "signature" ? "署名です。ここでは動かしたり消したりできません。" : "この注釈は移動と削除ができます（中身の変更は DocuWorks で）。" }));
+    box.append(el("p", { class: "note", text: "この注釈は移動と削除ができます（中身の変更は DocuWorks で）。" }));
   }
   if (ob.kind !== "page" && ob.kind !== "signature") box.append(el("div", { class: "row" }, el("button", { class: "pbtn", html: ic("trash-2") + "削除", onclick: deleteSelected })));
   host.append(box);

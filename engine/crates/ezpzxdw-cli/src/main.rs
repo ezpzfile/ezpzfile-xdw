@@ -187,8 +187,11 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             }
             for (k, p) in d.pages.iter().enumerate() {
                 writeln!(out, "page {} {}x{}", k + 1, p.w, p.h)?;
-                for o in &p.objects {
+                for (oi, o) in p.objects.iter().enumerate() {
                     writeln!(out, "  {} {:#x} at {},{} size {}x{} rot {} {}", o.kind_name, o.kind, o.x, o.y, o.w, o.h, o.rotation, o.text.clone().unwrap_or_default())?;
+                    if let Some(s) = d.signature_of(k, oi) {
+                        writeln!(out, "    signature: {} {}{}", if s.stamp { "stamp" } else { "pki" }, s.module, s.version.map(|v| format!(" ({v})")).unwrap_or_default())?;
+                    }
                 }
             }
         }

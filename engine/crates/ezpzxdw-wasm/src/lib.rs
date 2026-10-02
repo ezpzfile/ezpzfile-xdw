@@ -167,6 +167,7 @@ impl XdwDoc {
                         "rotation": o.rotation, "text": o.text,
                         "editable": self.doc.editable(pi, oi),
                         "seeThrough": self.doc.picture_see_through(pi, oi),
+                        "signature": self.doc.signature_of(pi, oi),
                         "shape": self.doc.shape_of(pi, oi),
                     })
                 })

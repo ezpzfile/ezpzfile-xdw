@@ -44,6 +44,13 @@ fn every_page_draws() {
         for k in 0..d.pages.len() {
             let disp = d.render(k).unwrap_or_else(|e| panic!("{name} page {}: {e}", k + 1));
             assert!(disp.skipped.is_empty(), "{name} page {}: {:?}", k + 1, disp.skipped);
+            // every signature reads back its module from the properties
+            for (oi, o) in d.pages[k].objects.iter().enumerate() {
+                if o.kind_name == "signature" {
+                    let s = d.signature_of(k, oi).unwrap_or_else(|| panic!("{name}: signature info"));
+                    assert!(!s.module.is_empty(), "{name}: signature module");
+                }
+            }
         }
     }
 }

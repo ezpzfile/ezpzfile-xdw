@@ -264,6 +264,15 @@ swap the page size, move and swap every placement, add 90 to every object's 61.
   text on it); its placement (1302) also has 54 = 1. The text is a child:
   a placement **of kind 801a** (52 relative to the note, childdim) holding a
   text annotation (8011). The API sees one annotation with one child
+- signature (8043), placed like an annotation but not editable [corpus:
+  the contract sample]: `%smid` (the signing module number), `%smin` (the
+  module name, Shift_JIS, e.g. `DocuWorks電子印鑑 (SHA1 V5以降)` for the
+  electronic seal, which names a PKI module for a certificate signature),
+  `%sigver` (format version, e.g. `6.0`), `%sigpos`, 5, 55, 56, and three
+  references: `%spd` (the signature data: certificate / hash), `%pdbv`
+  (a drawing), and 7 (the stamp drawing). Reading these says who the
+  signing module is and the version; whether the signature still holds
+  needs the DocuWorks API or verifying the certificate
 
 ## 5. Drawings
 
@@ -406,4 +415,5 @@ pictures, outsourced definitions) and renumbers the references.
 - the WMF comment records `DW\x02\x00…03` in old pages (not needed to draw)
 - 8045 custom annotation data (`%annotation_customdata`)
 - markers, polygons, received stamps as Desk writes them
-- signatures (8043: `%sigver`, `%spd`, `%pdbv` …), passwords
+- verifying a signature's certificate (the module and version are read, 4.5)
+- passwords (the body records are encrypted; opening needs the password)

@@ -85,6 +85,17 @@ pub enum Shape {
     },
 }
 
+/// What a signature (8043) says about itself in the stored properties.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct SignatureInfo {
+    /// The signing module, as stored (e.g. "DocuWorks電子印鑑 (SHA1 …").
+    pub module: String,
+    /// The signature format version (`%sigver`), if present.
+    pub version: Option<String>,
+    /// A DocuWorks electronic seal (電子印鑑) rather than a PKI certificate.
+    pub stamp: bool,
+}
+
 fn twelve() -> f64 {
     12.0
 }
@@ -1059,6 +1070,29 @@ impl Document {
     /// Does the document carry a signature (editing makes it invalid)?
     pub fn is_signed(&self) -> bool {
         self.records.iter().any(|r| r.kind_num() == doc::K_SIGNATURE)
+    }
+
+    /// What is readable about a signature (8043) from the stored properties,
+    /// without the DocuWorks API: the signing module and the version. The
+    /// module string tells a DocuWorks electronic seal (電子印鑑) from a PKI
+    /// certificate signature. Whether the signature still holds needs the
+    /// DocuWorks API or verifying the certificate, which this does not do.
+    pub fn signature_of(&self, page: usize, obj: usize) -> Option<SignatureInfo> {
+        let o = self.object(page, obj).ok()?;
+        if o.kind != doc::K_SIGNATURE {
+            return None;
+        }
+        // %smin: the module name (Shift_JIS), e.g. "DocuWorks電子印鑑 (SHA1 …"
+        let module = self
+            .named(o.record, "%smin")
+            .map(|a| crate::sjis::decode(a.value.split(|&b| b == 0).next().unwrap_or(&a.value)))
+            .unwrap_or_default();
+        let version = self
+            .named(o.record, "%sigver")
+            .map(|a| crate::sjis::decode(a.value.split(|&b| b == 0).next().unwrap_or(&a.value)))
+            .filter(|s| !s.is_empty());
+        let stamp = module.contains("電子印鑑") || module.contains("Stamp");
+        Some(SignatureInfo { module, version, stamp })
     }
 
     /// Is `obj` one of the annotation kinds this editor can redraw
