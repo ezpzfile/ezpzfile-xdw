@@ -1,6 +1,8 @@
-# EZPZ File XDW
-
-[日本語](README.md) · [English](README.en.md) · **한국어**
+<p align="center">
+  <img src="docs/images/ezpz_xdw.svg" alt="EZPZ File XDW" width="96">
+</p>
+<h1 align="center">EZPZ File XDW</h1>
+<p align="center"><a href="README.md">日本語</a> · <a href="README.en.md">English</a> · <b>한국어</b></p>
 
 **DocuWorks(`.xdw`) 문서를 맥·리눅스·휴대폰·브라우저에서 열고 주석을 달아 그대로 저장.**
 후지필름(옛 후지제록스) DocuWorks 파일을 다루는 오픈소스 엔진·편집기·파일 형식 규격서입니다.
@@ -8,6 +10,10 @@
 
 상태: **v0.2. `.xdw` / `.xbd`로 다시 저장하는 뷰어 + 편집기(개발자 미리보기).**
 후지필름 비즈니스 이노베이션과는 관계없습니다.
+
+![XDW 편집기 화면](docs/images/editor.png)
+
+<sub>견본 견적서에 날짜 도장·형광펜·付箋·비치는 승인 도장을 단 모습. DocuWorks에서 열어도 똑같이 보입니다.</sub>
 
 ## 되는 것
 
