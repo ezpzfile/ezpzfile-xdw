@@ -19,3 +19,4 @@ pub mod edit;
 pub mod pdf;
 pub mod pages;
 pub mod cfb;
+pub mod fresh;

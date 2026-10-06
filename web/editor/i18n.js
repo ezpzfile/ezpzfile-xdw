@@ -34,8 +34,12 @@ const EN = {
   "縮小": "Zoom Out",
   "拡大": "Zoom In",
   "DocuWorks 文書をここにドロップ": "Drag and drop a DocuWorks file here",
-  "DocuWorks がなくても .xdw と .xbd を開いて、注釈を付けて保存できます。PDF にも書き出せます。": "Open .xdw and .xbd files without DocuWorks, add annotations and save. You can also save them as PDF.",
+  "DocuWorks がなくても .xdw と .xbd を開いて、注釈を付けて保存できます。白紙から新しく作ることも、PDF や画像をドロップして DocuWorks 文書にすることもできます。": "Open .xdw and .xbd files without DocuWorks, add annotations and save. You can also start from a blank page, or drop PDFs and pictures to turn them into a DocuWorks file.",
   "ファイルを開く": "Open File",
+  "新規文書": "New Document",
+  "新規作成": "New",
+  "無題": "Untitled",
+  "新しい文書を作りました。テキストや付箋を置くか、PDF・画像をドロップしてページにできます。": "New document ready. Add text or sticky notes, or drop PDFs and pictures to add them as pages.",
   "ファイルはこのブラウザの中だけで処理されます": "Your file never leaves this browser",
   "ここにドロップ（.xdw / .xbd は開く・PDF や画像はページとして挿入）": "Drop here (.xdw / .xbd opens; a PDF or picture is inserted as pages)",
 

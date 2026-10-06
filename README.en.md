@@ -26,8 +26,13 @@ Tested on 43 public DocuWorks files (generation 7 and 10, `.xdw` and `.xbd`):
 - all 43 open, every page draws with no unknown drawing records
 - pages: EMF and WMF drawings, the DocuWorks driver's own compact path and
   picture records, JPEG picture strips, scanned/rotated pages, annotations
-- **saving back to `.xdw`**, the way DocuWorks itself saves (one segment appended,
-  nothing earlier rewritten). Saved files open in **DocuWorks Viewer Light**
+- **saving back to `.xdw`**: the whole file is written anew with only what the
+  document uses now, so deleted pages and annotations do not stay in the file.
+  A signed document is saved the way DocuWorks saves (one segment appended), which
+  keeps the signed state. Saved files open in **DocuWorks Viewer Light**
+- **new documents**: start from a blank A4 page, written the way DocuWorks 10 writes
+  a new document. Drop PDFs or pictures with nothing open and their pages make a
+  new document
 - annotations: add **text, sticky note (付箋), date stamp (日付印), highlighter,
   rectangle, ellipse, line, picture**; move, resize, change, delete (existing
   annotations from DocuWorks too: move / delete). A picture can be
@@ -65,7 +70,7 @@ properties on the right) in the EZPZ File design. Keys: T text, S sticky note,
 D date stamp, H highlighter, R rectangle, E ellipse, L line, Esc select,
 Delete, arrows (Shift = 1 cm), Ctrl+Z / Ctrl+Y, Ctrl+S, Ctrl+Shift+S (save as
 PDF / text), Ctrl+P, Ctrl+F (search). Drop a PDF or a picture on an open document to insert it
-as pages.
+as pages; with nothing open, it becomes a new document.
 
 The screen comes in Japanese and English: `web/dist/ezpzxdw-editor.en.html` is the
 English one, and `?lang=en` / `?lang=ja` switches either file. To use it right away in a
@@ -81,7 +86,9 @@ whether a file opens, with a screenshot. `tools/dwapi` calls the API of
 the latest DocuWorks 10 itself so that DocuWorks reads our saved
 files (pages, annotations and their settings) and draws their pages. Every
 saved test file matches and draws (38 public samples + 5 DocuWorks 10 samples,
-all editing features); DocuWorks Desk lists them with their pages. See
+all editing features); DocuWorks Desk lists them with their pages. New documents
+made from scratch and files written anew open in Viewer Light too (39 public samples
+rewritten and edited, new documents, files saved from the browser). See
 [experiments/results.md](experiments/results.md) (in Korean).
 
 ## Layout

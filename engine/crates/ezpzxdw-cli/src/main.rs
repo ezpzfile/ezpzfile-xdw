@@ -24,6 +24,8 @@ USAGE:
                                  {"op":"move_page","from":0,"to":2}, {"op":"delete","page":0,"obj":1},
                                  {"op":"move","page":0,"obj":1,"x":…,"y":…}]
   ezpzxdw resave <in> <out>        save again without changes (appends a segment)
+  ezpzxdw rewrite <in> <out>       write the whole file anew: only the entries in use
+  ezpzxdw new    <out> [w h]       a new document with one blank page (1/100 mm; A4 portrait)
   ezpzxdw set-content <in> <entry> <data> <out>
                                  replace what entry <entry> holds (expanded data)
   ezpzxdw lzh-c  <in> <out>        compress (LHA -lh5-)
@@ -68,6 +70,12 @@ fn show_value(v: &[u8]) -> String {
 }
 
 fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    if a[1] == "new" {
+        let size = |k: usize, v: f64| a.get(k).map(|s| s.parse::<f64>()).transpose().map(|x| x.unwrap_or(v));
+        let d = ezpzxdw_core::doc::Document::blank(size(3, 21000.0)?, size(4, 29700.0)?)?;
+        std::fs::write(&a[2], &d.bytes)?;
+        return Ok(());
+    }
     let b = std::fs::read(&a[2])?;
     match a[1].as_str() {
         "lzh-c" => {
@@ -383,6 +391,23 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         "resave" => {
             let recs = props::parse(&c.properties(&b)?)?;
             let (o, _) = ezpzxdw_core::write::append(&b, &c, &[], &recs)?;
+            std::fs::write(a.get(3).ok_or("missing out")?, o)?;
+        }
+        "rewrite" => {
+            let d = ezpzxdw_core::doc::Document::open(b.clone())?;
+            let p = d.fresh_parts()?;
+            let o = d.save_fresh()?;
+            let dropped: Vec<String> = p.map.iter().enumerate().filter(|(_, m)| m.is_none()).map(|(k, _)| k.to_string()).collect();
+            writeln!(
+                out,
+                "segments {} → 1 | entries {} → {} | bytes {} → {}{}",
+                c.segments.len(),
+                p.map.len(),
+                p.entries.len(),
+                b.len(),
+                o.len(),
+                if dropped.is_empty() { String::new() } else { format!(" | left out: {}", dropped.join(" ")) }
+            )?;
             std::fs::write(a.get(3).ok_or("missing out")?, o)?;
         }
         "set-content" => {

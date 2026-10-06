@@ -972,9 +972,11 @@ impl Document {
         (records, kept)
     }
 
-    /// The document as a `.xdw` file (original bytes + one new segment).
-    /// The result is read back and checked before it is returned.
-    pub fn save(&self) -> Result<Vec<u8>> {
+    /// The document as a `.xdw` file (original bytes + one new segment),
+    /// the way DocuWorks saves: everything the file held stays in it. The
+    /// result is read back and checked before it is returned. `save` writes
+    /// the file anew instead (see `fresh`).
+    pub fn save_append(&self) -> Result<Vec<u8>> {
         let (records, entries) = self.to_write();
         let (bytes, _) = write::append(&self.bytes, &self.container, &entries, &records)?;
         let back = Document::open(bytes.clone())?;

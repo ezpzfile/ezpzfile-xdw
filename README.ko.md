@@ -25,8 +25,11 @@
 
 - 43개 모두 열리고 모든 쪽이 모르는 그리기 기록 없이 그려짐
 - 쪽: EMF·WMF 그림, DocuWorks 드라이버 전용 압축 경로·그림 기록, JPEG 그림 조각, 스캔·회전된 쪽, 주석
-- **`.xdw`로 저장**: DocuWorks와 같은 방식(끝에 세그먼트 하나를 덧붙이고 앞부분은 건드리지 않음).
+- **`.xdw`로 저장**: 파일 전체를 새로 써서 지금 쓰는 데이터만 남김(지운 쪽이나 주석이 파일에 남지 않음).
+  서명이 있는 문서만 DocuWorks와 같은 방식(끝에 세그먼트 하나를 덧붙임)으로 저장해 서명한 때의 내용을 남김.
   저장한 파일은 **DocuWorks Viewer Light**에서 열림
+- **새 문서**: 빈 A4 한 쪽으로 새 DocuWorks 문서를 만듦(DocuWorks 10이 만드는 문서와 같은 모양). 아무것도 열지
+  않은 채 PDF나 그림을 끌어다 놓으면 그 쪽들로 새 문서가 됨
 - 주석: **텍스트, 付箋(포스트잇), 日付印(날짜 도장), 형광펜, 사각형, 타원, 직선, 그림** 추가. 이동·크기·
   내용 변경·삭제(DocuWorks에서 단 기존 주석도 이동·삭제 가능). 그림은 **흰 부분을 비치게** 해서 밑의 글자가
   보이게 할 수 있고, DocuWorks에서도 똑같이 보임
@@ -58,7 +61,7 @@ DocuWorks가 확인하는 검사값, 드라이버 전용 그리기 기록 등 �
 
 키: T 텍스트, S 付箋, D 日付印, H 형광펜, R 사각형, E 타원, L 직선, Esc 선택, Delete 삭제,
 화살표(Shift는 1cm), Ctrl+Z / Ctrl+Y, Ctrl+S, Ctrl+Shift+S(PDF·텍스트로 저장), Ctrl+P, Ctrl+F(찾기).
-열린 문서에 PDF나 그림을 끌어다 놓으면 쪽으로 들어갑니다.
+열린 문서에 PDF나 그림을 끌어다 놓으면 쪽으로 들어가고, 아무것도 열지 않았으면 그것으로 새 문서를 만듭니다.
 
 화면 글은 일본어와 영어가 있습니다. 영어판은 `web/dist/ezpzxdw-editor.en.html`이고, 어느 파일이든
 `?lang=en` / `?lang=ja`로 바꿀 수 있습니다. 브라우저에서 바로 쓰려면 [ezpzfile.com/xdw-editor](https://ezpzfile.com/xdw-editor).
@@ -71,7 +74,9 @@ DocuWorks가 확인하는 검사값, 드라이버 전용 그리기 기록 등 �
 사진과 함께 알려 줍니다. `tools/dwapi`는 DocuWorks 10 본체(최신판)의 API를 불러, 우리가 저장한
 파일을 DocuWorks가 직접 읽고(쪽, 주석과 그 설정) 쪽을 그리게 합니다. 테스트로 저장한 파일은 모두
 일치하고 그려졌습니다(공개 샘플 38개 + DocuWorks 10 샘플 5개, 모든 편집 기능). DocuWorks Desk 목록에도
-쪽과 함께 나옵니다. 결과는 [experiments/results.md](experiments/results.md)에 있습니다.
+쪽과 함께 나옵니다. 처음부터 만든 새 문서와 파일 전체를 새로 쓴 저장도 Viewer Light에서 열리는 것을
+확인했습니다(공개 샘플 39개를 새로 쓴 것과 고쳐 저장한 것, 새 문서, 브라우저에서 저장한 것). 결과는
+[experiments/results.md](experiments/results.md)에 있습니다.
 
 ## 구성
 

@@ -1,10 +1,16 @@
-//! Saving: append one segment, the way DocuWorks itself saves.
+//! Saving, two ways.
 //!
-//! Nothing already in the file is rewritten. The new segment holds the
-//! entries that are new (page content, pictures), the complete new
-//! properties block, and a trailer listing every entry in effect. Entries
-//! keep their numbers: the old table is copied as it is and new entries are
-//! added at the end, so references in the properties stay valid.
+//! `append` adds one segment, the way DocuWorks itself saves. Nothing
+//! already in the file is rewritten. The new segment holds the entries that
+//! are new (page content, pictures), the complete new properties block, and
+//! a trailer listing every entry in effect. Entries keep their numbers: the
+//! old table is copied as it is and new entries are added at the end, so
+//! references in the properties stay valid. Everything the file held before
+//! stays in it, deleted pages included.
+//!
+//! `fresh` writes the whole file anew: the header, then one segment with
+//! only the entries given (numbered from 0), the properties and the trailer.
+//! This is also how a document DocuWorks has saved only once looks.
 //!
 //! What the viewer checks (found by testing DocuWorks Viewer Light):
 //! - the trailer's last field gives the trailer's length, counted from the
@@ -110,60 +116,73 @@ pub fn read_ref(v: &[u8]) -> Option<(u32, usize)> {
     Some((idx, len))
 }
 
+/// A complete entry element: `0x64 { 0x81 check, 0x82 body }`.
+pub fn entry_element(body: &[u8]) -> Vec<u8> {
+    let mut v = element(0x81, &tlv::i32_bytes(tlv::check(body)));
+    v.extend(element(0x82, body));
+    element(crate::container::T_ENTRY, &v)
+}
+
 /// Append a segment to `orig` holding `new_entries` and `records`.
 /// Returns the new file and the numbers given to the new entries.
 pub fn append(orig: &[u8], c: &Container, new_entries: &[NewEntry], records: &[Record]) -> Result<(Vec<u8>, Vec<u32>)> {
     let first_new = c.trailer.offsets.len() as u32;
     let numbers: Vec<u32> = (0..new_entries.len() as u32).map(|k| first_new + k).collect();
-
-    let entries: Vec<Vec<u8>> = new_entries
-        .iter()
-        .map(|e| {
-            let mut v = element(0x81, &tlv::i32_bytes(tlv::check(&e.body)));
-            v.extend(element(0x82, &e.body));
-            element(crate::container::T_ENTRY, &v)
-        })
-        .collect();
-
-    let expanded = props::write(records);
-    let stored = lzh::compress(&expanded);
-    let props_el = element(crate::container::T_PROPERTIES, &stored);
-
+    let entries: Vec<Vec<u8>> = new_entries.iter().map(|e| entry_element(&e.body)).collect();
     let mut checks = c.trailer.checks.clone();
     for (k, e) in new_entries.iter().enumerate() {
         if e.picture {
             checks.push((numbers[k], tlv::check(&e.body)));
         }
     }
+    let seg = segment(orig.len(), &c.trailer.offsets, &entries, &checks, records, c.trailer.tag, &c.trailer.unknown82)?;
+    let mut out = orig.to_vec();
+    out.extend_from_slice(&seg);
+    Ok((out, numbers))
+}
 
+/// A whole file: `header` (the complete 0x60 element), then one segment
+/// holding `entries` (complete 0x64 elements, numbered from 0 in this
+/// order), the properties and a trailer tagged `tag`. `checks` are the
+/// (number, check value) pairs of raw pictures for the trailer's 0x8d.
+pub fn fresh(header: &[u8], entries: &[Vec<u8>], checks: &[(u32, u32)], records: &[Record], tag: u8, unknown82: &[u8]) -> Result<Vec<u8>> {
+    let seg = segment(header.len(), &[], entries, checks, records, tag, unknown82)?;
+    let mut out = header.to_vec();
+    out.extend_from_slice(&seg);
+    Ok(out)
+}
+
+/// One segment starting at file offset `start`: `entries`, the properties
+/// and a trailer whose table is `prior` followed by these entries.
+fn segment(start: usize, prior: &[u32], entries: &[Vec<u8>], checks: &[(u32, u32)], records: &[Record], tag: u8, unknown82: &[u8]) -> Result<Vec<u8>> {
+    let expanded = props::write(records);
+    let stored = lzh::compress(&expanded);
+    let props_el = element(crate::container::T_PROPERTIES, &stored);
     // The segment header's size depends on the segment's length, which
     // depends on the entry offsets in the trailer; settle it by trying.
-    let start = orig.len();
     for hdr in [4usize, 5, 6, 2, 3] {
-        let mut offsets: Vec<u32> = c.trailer.offsets.clone();
+        let mut offsets: Vec<u32> = prior.to_vec();
         let mut at = start + hdr;
-        for e in &entries {
+        for e in entries {
             offsets.push(at as u32);
             at += e.len();
         }
-        let trailer = trailer_element(c, &offsets, &checks, expanded.len(), &stored);
+        let trailer = trailer_element(tag, unknown82, &offsets, checks, expanded.len(), &stored);
         let mut body = Vec::new();
-        for e in &entries {
+        for e in entries {
             body.extend_from_slice(e);
         }
         body.extend_from_slice(&props_el);
         body.extend_from_slice(&trailer);
         let seg = element(crate::container::T_SEGMENT, &body);
         if seg.len() - body.len() == hdr {
-            let mut out = orig.to_vec();
-            out.extend_from_slice(&seg);
-            return Ok((out, numbers));
+            return Ok(seg);
         }
     }
     Err(crate::error::Error::Unsupported("segment too large".into()))
 }
 
-fn trailer_element(c: &Container, offsets: &[u32], checks: &[(u32, u32)], expanded: usize, stored: &[u8]) -> Vec<u8> {
+fn trailer_element(tag: u8, unknown82: &[u8], offsets: &[u32], checks: &[(u32, u32)], expanded: usize, stored: &[u8]) -> Vec<u8> {
     let mut v = Vec::new();
     v.extend(element(0x80, &tlv::uint_bytes(offsets.len() as u64)));
     if !offsets.is_empty() {
@@ -181,15 +200,15 @@ fn trailer_element(c: &Container, offsets: &[u32], checks: &[(u32, u32)], expand
         }
         v.extend(element(0x8d, &o));
     }
-    let u82 = if c.trailer.unknown82.is_empty() { vec![0] } else { c.trailer.unknown82.clone() };
-    v.extend(element(0x82, &u82));
+    let u82: &[u8] = if unknown82.is_empty() { &[0] } else { unknown82 };
+    v.extend(element(0x82, u82));
     v.extend(element(0x83, &tlv::uint_bytes(expanded as u64)));
     v.extend(element(0x84, &tlv::uint_bytes(stored.len() as u64)));
     v.extend(element(0x85, &tlv::i32_bytes(tlv::check(stored))));
     // the last field: the length of the trailer's value, this field included
     let self_len = (v.len() + 6) as u32;
     v.extend(element(0x86, &self_len.to_le_bytes()));
-    element(c.trailer.tag, &v)
+    element(tag, &v)
 }
 
 #[cfg(test)]

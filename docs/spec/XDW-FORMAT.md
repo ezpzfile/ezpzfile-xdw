@@ -400,13 +400,50 @@ start an OLE server: Viewer says it cannot, as for any pasted picture.
 
 ## 6. Writing (what EZPZ File XDW does)
 
+There are two ways to save. The editor writes the file anew, except for a
+document with a signature, which it appends to.
+
+**Written anew** (`Document::save_fresh`):
+
+1. The header element as it was (generation, document or binder).
+2. One segment: the entries the properties refer to, copied byte for byte in
+   their old order and numbered from 0. A reference is a private-class
+   attribute whose value reads as `81` number `82` length (drawings, small
+   pictures, pictures 301…, definitions kept in an entry, embedded files,
+   signature data); its other fields are kept when it is renumbered.
+3. The properties with the references renumbered, then a trailer with the
+   same tag and 0x82 as before; 0x8d lists the raw pictures kept.
+4. Read the result back: the same tree, one segment, every entry the same.
+
+Nothing a deleted page or annotation used stays in the file, and neither do
+the earlier segments of a file DocuWorks saved several times. In every sample
+each entry in effect is referred to from the properties, so nothing the
+document shows is left out [corpus: every page draws the same after writing
+anew; viewer: 39 samples written anew, and the same files edited and saved,
+open in Viewer Light].
+
+**Appended** (`Document::save_append`), the way DocuWorks saves:
+
 1. Keep the file; append `0x61 { new entries, 0x63 properties, trailer }`.
 2. Entry table = the old one, new entries at the end (numbers stay valid).
 3. Properties = the edited tree, LZH-compressed; 0x85 = its check value.
 4. Trailer 0x86 = the trailer value's length; lengths written the DocuWorks way.
 5. Read the result back and compare the tree before handing it out.
 
-Files written this way open in DocuWorks 10 itself (its API reads the same
+Everything the file held stays in it. A signed document is saved this way, so
+the state that was signed stays in the file as DocuWorks keeps it.
+
+**A new document** (`Document::blank`) is written the way DocuWorks 10 writes
+one [a DocuWorks 10 sample with a blank page]: the header
+`60 0e 82 01 0a 80 03 00 c0 13 83 04 01 0d 0a 01` (generation 10, document
+c013, 0x83 as every sample has it), one segment with no entries, the
+properties c013 → 1303 (lastmid 1) → 1301 (lastmid 0, 5 = size, 3 = 1), then
+1304, 1306 and 1305 with no attributes, and a trailer 0x68 with 0x82 = 0
+[viewer: opens as one blank page; with annotations of every kind, picture
+pages, a B4 page and pages of another document added and saved, it opens
+with all of them].
+
+Files appended this way open in DocuWorks 10 itself (its API reads the same
 pages, annotations and settings and draws every page; Desk lists them with
 their pages) and in DocuWorks Viewer Light, with added text,
 highlighter, rectangle, ellipse and line annotations, moved annotations,

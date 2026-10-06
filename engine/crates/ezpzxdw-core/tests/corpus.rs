@@ -4,7 +4,17 @@
 use ezpzxdw_core::container::Container;
 use ezpzxdw_core::doc::Document;
 use ezpzxdw_core::edit::Shape;
-use ezpzxdw_core::{props, tlv};
+use ezpzxdw_core::{props, tlv, write};
+
+/// The records a save writes: renumbered for a file written anew, or as
+/// `to_write` gives them when it appends (documents with a signature).
+fn written(d: &Document) -> Vec<props::Record> {
+    if d.is_signed() {
+        d.to_write().0
+    } else {
+        d.fresh_parts().unwrap().records
+    }
+}
 
 fn corpus() -> Vec<(String, Vec<u8>)> {
     let Ok(dir) = std::env::var("EZPZXDW_CORPUS") else {
@@ -104,7 +114,7 @@ fn edits_save_and_read_back() {
         }
         let saved = d.save().unwrap_or_else(|e| panic!("{name}: {e}"));
         let back = Document::open(saved).unwrap();
-        assert_eq!(back.records, d.to_write().0, "{name}");
+        assert_eq!(back.records, written(&d), "{name}");
         assert_eq!(back.pages.len(), n, "{name}");
         let first_with_annots = if moved { 1 } else { 0 };
         let shapes_back: Vec<_> = (0..back.pages[first_with_annots].objects.len()).filter_map(|o| back.shape_of(first_with_annots, o)).collect();
@@ -166,7 +176,7 @@ fn new_pages_stamps_and_binder_documents() {
         }
         let saved = d.save().unwrap_or_else(|e| panic!("{name}: {e}"));
         let back = Document::open(saved).unwrap();
-        assert_eq!(back.records, d.records, "{name}");
+        assert_eq!(back.records, written(&d), "{name}");
         assert_eq!(back.pages.len(), expect, "{name}");
         // the stamp and the sticky note read back as drawn
         let shapes: Vec<Shape> = d.pages.iter().enumerate().flat_map(|(p, pg)| (0..pg.objects.len()).filter_map(|o| back.shape_of(p, o)).collect::<Vec<_>>()).collect();
@@ -184,4 +194,102 @@ fn new_pages_stamps_and_binder_documents() {
             assert_eq!(last.images.len(), 1, "{name}: picture page");
         }
     }
+}
+
+/// Written anew, every file reads back as one segment that draws exactly the
+/// same, keeps its check values, and writing it anew again changes nothing.
+#[test]
+fn every_file_writes_anew_and_draws_the_same() {
+    for (name, b) in corpus() {
+        let d = Document::open(b.clone()).unwrap();
+        let fresh = d.save_fresh().unwrap_or_else(|e| panic!("{name}: {e}"));
+        let back = Document::open(fresh.clone()).unwrap_or_else(|e| panic!("{name}: {e}"));
+        assert_eq!(back.container.segments.len(), 1, "{name}");
+        assert_eq!(back.container.generation, d.container.generation, "{name}");
+        assert_eq!(fresh[..d.container.header.0 + d.container.header.1], b[..d.container.header.0 + d.container.header.1], "{name}: header");
+        assert_eq!(back.pages.len(), d.pages.len(), "{name}");
+        assert_eq!(back.binder_docs().len(), d.binder_docs().len(), "{name}");
+        for k in 0..d.pages.len() {
+            let (a, z) = (d.render(k).unwrap(), back.render(k).unwrap());
+            assert_eq!(format!("{a:?}"), format!("{z:?}"), "{name} page {}", k + 1);
+        }
+        let c = Container::parse(&fresh).unwrap();
+        assert_eq!(tlv::check(c.properties_stored(&fresh).unwrap()), c.trailer.check, "{name}: properties check value");
+        for e in c.entries(&fresh).unwrap() {
+            assert_eq!(e.check, Some(tlv::check(&fresh[e.body_range.0..e.body_range.0 + e.body_range.1])), "{name}: entry check value");
+        }
+        assert_eq!(back.save_fresh().unwrap(), fresh, "{name}: writing anew again");
+    }
+}
+
+/// A deleted page leaves nothing behind when the file is written anew: the
+/// entries only it used are gone (appending keeps them).
+#[test]
+fn a_deleted_page_is_gone_from_the_file() {
+    let mut checked = 0;
+    for (name, b) in corpus() {
+        if b.len() > 4_000_000 {
+            continue;
+        }
+        let mut d = Document::open(b.clone()).unwrap();
+        if d.pages.len() < 2 || d.is_signed() || d.is_binder() {
+            continue;
+        }
+        // entries page 1 refers to, and that nothing else refers to
+        let p = d.pages[0].record;
+        let end = (p + 1..d.records.len()).find(|&j| d.records[j].depth <= d.records[p].depth).unwrap_or(d.records.len());
+        let refs = |recs: &[props::Record]| -> Vec<u32> {
+            recs.iter().flat_map(|r| r.attrs.iter()).filter(|a| a.class & 0xc0 == 0xc0).filter_map(|a| write::read_ref(&a.value)).map(|(n, _)| n).collect()
+        };
+        let mine = refs(&d.records[p..end]);
+        let others: Vec<u32> = refs(&d.records[..p]).into_iter().chain(refs(&d.records[end..])).collect();
+        let only: Vec<u32> = mine.into_iter().filter(|n| !others.contains(n)).collect();
+        // a body long enough to be found only where it is stored
+        let Some(body) = only.iter().filter_map(|&n| d.entry_body(n as usize)).filter(|b| b.len() >= 64).map(|b| b.to_vec()).next() else { continue };
+        d.delete_page(0).unwrap();
+        let has = |hay: &[u8]| hay.windows(body.len()).any(|w| w == &body[..]);
+        assert!(has(&d.save_append().unwrap()), "{name}: appending keeps the deleted page");
+        let fresh = d.save_fresh().unwrap();
+        assert!(!has(&fresh), "{name}: the deleted page is still in the file written anew");
+        assert_eq!(Document::open(fresh).unwrap().pages.len(), d.pages.len(), "{name}");
+        checked += 1;
+    }
+    if !corpus().is_empty() {
+        assert!(checked > 5, "only {checked} files checked");
+    }
+}
+
+/// A new document takes everything the editor does and saves as one segment.
+#[test]
+fn a_new_document_from_scratch() {
+    use ezpzxdw_core::pages::{jpeg_size, Jpeg};
+    let mut d = Document::blank(21000.0, 29700.0).unwrap();
+    let shapes = [
+        Shape::Text { text: "新規文書\n二行目".into(), size: 12.0, color: 0xd40000, bold: true, background: None, frame: None },
+        Shape::Rect { stroke: None, width: 1.0, fill: Some(0xffe14d), highlight: true },
+        Shape::Ellipse { stroke: Some(0x00a36c), width: 3.0, fill: None },
+        Shape::Line { points: vec![(100.0, 100.0), (3000.0, 1500.0)], color: 0, width: 1.0 },
+        Shape::Stamp { top: "受付".into(), date: "'26.10.07".into(), bottom: "総務".into(), color: 0xe60012 },
+        Shape::Sticky { text: "付箋".into(), size: 12.0, color: 0, background: 0xffff64 },
+    ];
+    for (k, s) in shapes.iter().enumerate() {
+        d.add_annotation(0, 1500.0 + 300.0 * k as f64, 1500.0 + 3500.0 * k as f64, 4000.0, 1600.0, s).unwrap();
+    }
+    let jpeg = include_bytes!("data/tiny.jpg");
+    let (jw, jh) = jpeg_size(jpeg).unwrap();
+    d.insert_image_page(1, 29700.0, 21000.0, &Jpeg { data: jpeg, w: jw, h: jh }, None, None).unwrap();
+    d.insert_blank_page(2, 25700.0, 36400.0).unwrap();
+    d.rotate_page(2, 1).unwrap();
+    let saved = d.save().unwrap();
+    let back = Document::open(saved).unwrap();
+    assert_eq!(back.container.segments.len(), 1);
+    assert_eq!(back.pages.len(), 3);
+    assert_eq!((back.pages[2].w, back.pages[2].h), (36400, 25700));
+    for s in &shapes {
+        assert!((0..back.pages[0].objects.len()).any(|o| back.shape_of(0, o).as_ref() == Some(s)), "{s:?}");
+    }
+    for k in 0..3 {
+        assert!(back.render(k).unwrap().skipped.is_empty());
+    }
+    assert_eq!(back.render(1).unwrap().images.len(), 1);
 }

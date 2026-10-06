@@ -137,15 +137,27 @@ pub struct XdwDoc {
     undo: Vec<Vec<Record>>,
     redo: Vec<Vec<Record>>,
     saved_state: Vec<Record>,
+    /// How the last save was written: "fresh" (the whole file anew) or
+    /// "append" (a document with a signature); empty before the first save.
+    save_mode: &'static str,
 }
 
 #[wasm_bindgen]
 impl XdwDoc {
     #[wasm_bindgen(constructor)]
     pub fn new(bytes: Vec<u8>) -> Result<XdwDoc, JsError> {
-        let doc = Document::open(bytes).map_err(err)?;
+        Ok(XdwDoc::of(Document::open(bytes).map_err(err)?))
+    }
+
+    /// A new document: one blank page `w` × `h` (1/100 mm; A4 portrait is
+    /// 21000 × 29700), written the way DocuWorks 10 writes a new document.
+    pub fn blank(w: f64, h: f64) -> Result<XdwDoc, JsError> {
+        Ok(XdwDoc::of(Document::blank(w, h).map_err(err)?))
+    }
+
+    fn of(doc: Document) -> XdwDoc {
         let saved_state = doc.records.clone();
-        Ok(XdwDoc { doc, cache: HashMap::new(), undo: Vec::new(), redo: Vec::new(), saved_state })
+        XdwDoc { doc, cache: HashMap::new(), undo: Vec::new(), redo: Vec::new(), saved_state, save_mode: "" }
     }
 
     #[wasm_bindgen(js_name = pageCount)]
@@ -425,6 +437,13 @@ impl XdwDoc {
         }
     }
 
+    /// Forget undo and redo (a new document made from dropped files starts here).
+    #[wasm_bindgen(js_name = clearHistory)]
+    pub fn clear_history(&mut self) {
+        self.undo.clear();
+        self.redo.clear();
+    }
+
     #[wasm_bindgen(js_name = canUndo)]
     pub fn can_undo(&self) -> bool {
         !self.undo.is_empty()
@@ -440,11 +459,23 @@ impl XdwDoc {
         self.doc.records != self.saved_state
     }
 
-    /// The document as `.xdw` (checked by reading it back).
+    /// The document as `.xdw` / `.xbd`, the whole file written anew (only what
+    /// the document uses now); a document with a signature is appended to
+    /// instead. Checked by reading it back.
     pub fn save(&mut self) -> Result<Vec<u8>, JsError> {
-        let b = self.doc.save().map_err(err)?;
+        let (b, mode) = self.doc.save_with_mode().map_err(err)?;
         self.saved_state = self.doc.records.clone();
+        self.save_mode = match mode {
+            ezpzxdw_core::fresh::SaveMode::Fresh => "fresh",
+            ezpzxdw_core::fresh::SaveMode::Append => "append",
+        };
         Ok(b)
+    }
+
+    /// How the last save was written: "fresh", "append", or "" (not saved yet).
+    #[wasm_bindgen(js_name = saveMode)]
+    pub fn save_mode(&self) -> String {
+        self.save_mode.to_string()
     }
 
     /// PDF from page pictures: `jpegs` concatenated, `lens` their sizes,

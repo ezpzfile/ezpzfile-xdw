@@ -832,31 +832,73 @@ function paperName(w, h) {
 }
 
 // ------------------------------------------------------------------ open / save
+/** Show `ed` as the document being edited (an opened file or a new document). */
+function useDoc(ed, name) {
+  if (S.ed) S.ed.free();
+  S.ed = ed;
+  S.name = name;
+  S.ext = ed.binder() !== "null" ? ".xbd" : ".xdw";
+  S.sel = null;
+  S.cur = 0;
+  S.info = JSON.parse(ed.pages());
+  $("#ez-empty").hidden = true;
+  $("#app").classList.remove("nodoc");
+  $("#pages").hidden = false;
+  S.edited = false;
+  HOST.resetOnce();
+  fitIfNarrow();
+  buildPages();
+  setTool("select");
+  renderProps();
+  updateChrome();
+  $("#scroller").scrollTop = 0;
+}
+
+/** A new document: one blank A4 page, saved as DocuWorks 10 writes a new document. */
+async function newDoc() {
+  if (!(await askDiscard())) return;
+  useDoc(XdwDoc.blank(21000, 29700), tr("無題"));
+  HOST.event("new", { from: "blank" });
+  toast(tr("新しい文書を作りました。テキストや付箋を置くか、PDF・画像をドロップしてページにできます。"), 5000);
+}
+
+/** A new document made of the pages of PDFs and pictures (dropped with nothing open). */
+async function newFromFiles(files) {
+  if (!(await askDiscard())) return;
+  const ed = XdwDoc.blank(21000, 29700);
+  const name = files[0].name.replace(/\.[^.]+$/, "") || tr("無題");
+  useDoc(ed, name);
+  await insertFiles(files, 1);
+  if (S.info.length > 1) {
+    // the blank first page was only a place to start: undo starts after it
+    ed.deletePage(0);
+    ed.clearHistory();
+    S.info = JSON.parse(ed.pages());
+    S.cur = 0;
+    buildPages();
+    updateChrome();
+    setTimeout(() => gotoPage(0), 50);
+    HOST.event("new", { from: "files" });
+  } else {
+    // nothing could be read: back to the empty screen
+    ed.free();
+    S.ed = null;
+    S.info = [];
+    $("#ez-empty").hidden = false;
+    $("#app").classList.add("nodoc");
+    $("#pages").hidden = true;
+    updateChrome();
+  }
+}
+
 async function openFile(file) {
   if (!(await askDiscard())) return;
   try {
     const buf = new Uint8Array(await file.arrayBuffer());
     const ed = new XdwDoc(buf);
-    if (S.ed) S.ed.free();
-    S.ed = ed;
-    S.name = file.name.replace(/\.(xdw|xbd)$/i, "");
-    S.ext = ed.binder() !== "null" ? ".xbd" : ".xdw";
+    useDoc(ed, file.name.replace(/\.(xdw|xbd)$/i, ""));
     if (ed.isSigned()) setTimeout(() => toast(tr("この文書には署名があります。編集して保存すると、署名は無効になります。"), 7000), 400);
-    S.sel = null;
-    S.cur = 0;
-    S.info = JSON.parse(ed.pages());
-    $("#ez-empty").hidden = true;
-    $("#app").classList.remove("nodoc");
-    $("#pages").hidden = false;
-    S.edited = false;
-    HOST.resetOnce();
     HOST.event("file", { ext: S.ext.slice(1), pages: S.info.length });
-    fitIfNarrow();
-    buildPages();
-    setTool("select");
-    renderProps();
-    updateChrome();
-    $("#scroller").scrollTop = 0;
   } catch (e) {
     console.error(e);
     const msg = String(e.message || e);
@@ -1348,6 +1390,7 @@ async function pickBinderAdd() {
 function buildMenus() {
   const menus = [
     [tr("ファイル"), "F", [
+      [tr("新規作成"), "", newDoc],
       [tr("開く…"), MOD + "O", openPicker],
       [tr("上書き保存 (.xdw)"), MOD + "S", () => saveXdw()],
       [tr("名前を付けて保存…"), MOD + "Shift+S", saveAs],
@@ -1422,7 +1465,7 @@ function buildMenus() {
         const [lbl, sc_, fn, en] = it;
         const btn = el("button", { html: `<span class="lbl">${lbl}</span><span class="sc">${sc_}</span>`, onclick: () => { m.classList.remove("open"); fn(); } });
         if (en && !en()) btn.disabled = true;
-        if (!S.ed && fn !== openPicker) btn.disabled = true;
+        if (!S.ed && fn !== openPicker && fn !== newDoc) btn.disabled = true;
         drop.append(btn);
       }
       const r = b.getBoundingClientRect();
@@ -1636,9 +1679,11 @@ function bindChrome() {
     const f = fs[0];
     if (!f) return;
     e.preventDefault();
-    // pictures and PDFs dropped on an open document become new pages
-    if (S.ed && !/\.(xdw|xbd)$/i.test(f.name)) insertFiles(fs, S.cur + 1);
-    else openFile(f);
+    // pictures and PDFs dropped on an open document become new pages;
+    // with nothing open they make a new document
+    if (/\.(xdw|xbd)$/i.test(f.name)) openFile(f);
+    else if (S.ed) insertFiles(fs, S.cur + 1);
+    else newFromFiles(fs);
   });
   window.addEventListener("beforeunload", (e) => { if (!HOST.embedded && S.ed && S.ed.dirty()) { e.preventDefault(); e.returnValue = ""; } });
   document.addEventListener("mousedown", (e) => { if (!e.target.closest("#ez-save")) closeSaveMenu(); });
@@ -1694,6 +1739,10 @@ function bindHost() {
   open.innerHTML = ic("folder-open") + "<span></span>";
   open.lastChild.textContent = tr("ファイルを開く");
   open.addEventListener("click", openPicker);
+  const fresh = $("#ez-empty-new");
+  fresh.innerHTML = ic("file-plus") + "<span></span>";
+  fresh.lastChild.textContent = tr("新規文書");
+  fresh.addEventListener("click", newDoc);
   $("#ez-safe").innerHTML = ic("shield-check") + "<span></span>";
   $("#ez-safe").lastChild.textContent = tr("ファイルはこのブラウザの中だけで処理されます");
   HOST.on("open", (d) => { if (d.file instanceof File) openFile(d.file); });
