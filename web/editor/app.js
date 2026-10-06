@@ -1698,7 +1698,37 @@ function bindHost() {
   $("#ez-safe").lastChild.textContent = tr("ファイルはこのブラウザの中だけで処理されます");
   HOST.on("open", (d) => { if (d.file instanceof File) openFile(d.file); });
   HOST.on("reads", showReads);
+  HOST.on("video", showVideo);
   HOST.watchErrors();
+}
+
+/**
+ * A how-to video under the drop box, when the framing page sends one (a YouTube id and a label).
+ * Only the thumbnail loads at first. The player goes in when it is pressed: putting it in right
+ * away would fetch YouTube's scripts and set its cookies every time someone opens the editor.
+ */
+function showVideo(msg) {
+  const id = typeof msg.id === "string" && /^[A-Za-z0-9_-]{11}$/.test(msg.id) ? msg.id : null;
+  const label = typeof msg.label === "string" ? msg.label : "";
+  const box = $("#ez-howto"), play = $("#ez-howto-play");
+  if (!id || !label || !play) return;
+  const img = play.querySelector("img");
+  img.src = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+  img.srcset = `https://i.ytimg.com/vi/${id}/hqdefault.jpg 480w, https://i.ytimg.com/vi/${id}/maxresdefault.jpg 1280w`;
+  img.sizes = "(max-width: 560px) 100vw, 520px";
+  play.setAttribute("aria-label", label);
+  $("#ez-howto-caption").textContent = label;
+  play.onclick = () => {
+    const player = el("iframe", {
+      src: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`,
+      title: label,
+      allow: "autoplay; encrypted-media; picture-in-picture; fullscreen",
+      allowfullscreen: true,
+      referrerpolicy: "strict-origin-when-cross-origin",
+    });
+    play.replaceWith(player);
+  };
+  box.hidden = false;
 }
 
 /** "Read next" under the empty screen: column links the site sends (its own pages only). */

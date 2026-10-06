@@ -18,6 +18,8 @@
 //                  open {file}        open this File (handed over from another tool)
 //                  reads {title, items:[{title, href}]}
 //                                     articles to list under the empty screen
+//                  video {id, label}  a how-to video (a YouTube id) to show under the drop box:
+//                                     a thumbnail first, the player only once it is pressed
 //
 // The narrow-screen menu button asks the page to open its side menu with a
 // plain `ezpz:nav-open` event on the parent window.
