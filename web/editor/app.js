@@ -876,6 +876,7 @@ async function newFromFiles(files) {
     S.info = JSON.parse(ed.pages());
     S.cur = 0;
     buildPages();
+    renderProps();
     updateChrome();
     setTimeout(() => gotoPage(0), 50);
     HOST.event("new", { from: "files" });
@@ -1305,7 +1306,29 @@ async function pdfjs() {
   return (PDFJS = lib);
 }
 
-/** PDF pages become picture pages (200 dpi). */
+/** The text of a PDF page as lines for the page (1/100 mm, top-left): kept
+ * under the picture so it can still be searched, selected and copied, and
+ * a PDF saved from the document has text again. Only horizontal text on
+ * unrotated pages; the rest stays picture only. */
+async function pdfTextRuns(page, v1, pw, ph) {
+  if (((page.rotate || 0) % 360) !== 0) return [];
+  let tc;
+  try { tc = await page.getTextContent(); } catch { return []; }
+  const k = 2540 / 72, sx = pw / (v1.width * k), sy = ph / (v1.height * k);
+  const runs = [];
+  for (const it of tc.items || []) {
+    const s = (it.str || "").replace(/\s+$/, "");
+    if (!s.trim() || !it.transform) continue;
+    const [a, b, c, d, e, f] = it.transform;
+    if (Math.abs(b) > 1e-3 || Math.abs(c) > 1e-3 || a <= 0 || d <= 0) continue;
+    const size = d, [vx, vy] = v1.convertToViewportPoint(e, f);
+    const width = it.width > 0 ? it.width : size * s.length * 0.5;
+    runs.push({ x: vx * k * sx, y: (vy - size * 0.86) * k * sy, size: size * k * sy, width: width * k * sx, text: s });
+  }
+  return runs;
+}
+
+/** PDF pages become picture pages (200 dpi), with their text kept under the picture. */
 async function insertPdf(f, at) {
   toast(tr("PDF を読み込んでいます…"), 60000);
   const lib = await pdfjs();
@@ -1331,7 +1354,9 @@ async function insertPdf(f, at) {
     g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
     await page.render({ canvasContext: g, viewport: vp }).promise;
     const t = thumbOf(c, pw, ph);
-    S.ed.insertImagePage(at + done, pw, ph, await jpegOf(c, 0.88), c.width, c.height, t.rgba, t.w, t.h);
+    const runs = await pdfTextRuns(page, v1, pw, ph);
+    if (runs.length) S.ed.insertImagePageText(at + done, pw, ph, await jpegOf(c, 0.88), c.width, c.height, t.rgba, t.w, t.h, JSON.stringify(runs));
+    else S.ed.insertImagePage(at + done, pw, ph, await jpegOf(c, 0.88), c.width, c.height, t.rgba, t.w, t.h);
     done++;
   }
   pdf.destroy && pdf.destroy();

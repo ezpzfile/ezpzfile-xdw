@@ -42,6 +42,17 @@ pub struct Jpeg<'a> {
 }
 
 /// The small picture of a page (58): RGBA pixels, top row first.
+/// A line of text on a page (1/100 mm): top-left corner, font size
+/// (em height), the whole line's width.
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct TextRun {
+    pub x: f64,
+    pub y: f64,
+    pub size: f64,
+    pub width: f64,
+    pub text: String,
+}
+
 pub struct Thumb<'a> {
     pub rgba: &'a [u8],
     pub w: u32,
@@ -183,6 +194,15 @@ impl Document {
     /// way DocuWorks stores scanned pages: the picture as its own entry,
     /// drawn by the page's drawing with DocuWorks' DWb / DWc records.
     pub fn insert_image_page(&mut self, at: usize, w: f64, h: f64, jpeg: &Jpeg, dst: Option<[f64; 4]>, thumb: Option<&Thumb>) -> Result<usize> {
+        self.insert_image_page_text(at, w, h, jpeg, dst, thumb, &[])
+    }
+
+    /// The same, with the page's text kept under the picture: each run is
+    /// drawn first and the picture covers it, so the page looks the same
+    /// but the text can still be searched, selected and copied (here, in
+    /// DocuWorks, and in a PDF saved from it). Used for pages taken from a
+    /// PDF that has text.
+    pub fn insert_image_page_text(&mut self, at: usize, w: f64, h: f64, jpeg: &Jpeg, dst: Option<[f64; 4]>, thumb: Option<&Thumb>, text: &[TextRun]) -> Result<usize> {
         if jpeg.data.len() < 4 || jpeg.data[0] != 0xff || jpeg.data[1] != 0xd8 || jpeg.w == 0 || jpeg.h == 0 {
             return Err(Error::Unsupported("not a JPEG picture".into()));
         }
@@ -199,6 +219,30 @@ impl Document {
         let (dw, dh) = (px(w), px(h));
         let mut e = Emf::page(dw, dh);
         e.stretch_mode(3);
+        if !text.is_empty() {
+            e.text_color(0);
+            let mut em_now = -1;
+            for r in text {
+                let n = r.text.chars().count();
+                if n == 0 || r.size <= 0.0 {
+                    continue;
+                }
+                let em = px(r.size).max(1);
+                if em != em_now {
+                    e.font(em, 400, false, crate::edit::FACE);
+                    em_now = em;
+                }
+                let total = px(r.width).max(n as i32);
+                let mut adv = Vec::with_capacity(n);
+                let mut used = 0;
+                for k in 0..n {
+                    let next = (total as i64 * (k as i64 + 1) / n as i64) as i32;
+                    adv.push(next - used);
+                    used = next;
+                }
+                e.text(px(r.x), px(r.y), &r.text, &adv);
+            }
+        }
         e.next_picture(jpeg.w as i32, jpeg.h as i32, [px(dst[0]), px(dst[1]), px(dst[2]).max(1), px(dst[3]).max(1)]);
         let emf = e.finish(w, h);
         let fields = [(0x84, w.round() as i64), (0x85, h.round() as i64), (0x8d, 3), (0x90, dw as i64), (0x91, dh as i64)];

@@ -277,6 +277,28 @@ mod tests {
         assert_eq!(back.render(0).unwrap().skipped, Vec::<String>::new());
     }
 
+    #[test]
+    fn a_picture_page_keeps_its_text_under_the_picture() {
+        let mut d = Document::blank(21000.0, 29700.0).unwrap();
+        let jpeg = include_bytes!("../tests/data/tiny.jpg");
+        let j = crate::pages::Jpeg { data: jpeg, w: 24, h: 16 };
+        let runs = vec![
+            crate::pages::TextRun { x: 2540.0, y: 2540.0, size: 850.0, width: 9000.0, text: "Hello PDF".into() },
+            crate::pages::TextRun { x: 2540.0, y: 4000.0, size: 420.0, width: 6000.0, text: "テキストと한글".into() },
+        ];
+        d.insert_image_page_text(1, 21000.0, 29700.0, &j, None, None, &runs).unwrap();
+        d.delete_page(0).unwrap();
+        let back = Document::open(d.save().unwrap()).unwrap();
+        assert_eq!((back.pages[0].w, back.pages[0].h), (21000, 29700));
+        let r = back.render(0).unwrap();
+        let t = r.text();
+        assert!(t.contains("Hello PDF") && t.contains("テキストと한글"), "{t}");
+        // the text is drawn first, the picture after it (covers it)
+        let first_img = r.items.iter().position(|i| matches!(i, crate::gfx::Item::Image { .. }));
+        let last_text = r.items.iter().rposition(|i| matches!(i, crate::gfx::Item::Text { .. }));
+        assert!(last_text < first_img, "text under the picture");
+    }
+
     fn find(hay: &[u8], needle: &[u8]) -> bool {
         hay.windows(needle.len()).any(|w| w == needle)
     }

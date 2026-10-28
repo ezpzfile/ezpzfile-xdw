@@ -346,6 +346,19 @@ impl XdwDoc {
         Ok(r)
     }
 
+    /// The same, with the page's text kept under the picture (`text`: JSON
+    /// list of {x, y, size, width, text}, 1/100 mm, y = top of the line).
+    #[wasm_bindgen(js_name = insertImagePageText)]
+    pub fn insert_image_page_text(&mut self, at: usize, w: f64, h: f64, jpeg: &[u8], pxw: u32, pxh: u32, thumb: &[u8], tw: u32, th: u32, text: &str) -> Result<usize, JsError> {
+        let runs: Vec<ezpzxdw_core::pages::TextRun> = serde_json::from_str(text).map_err(err)?;
+        self.before();
+        let j = ezpzxdw_core::pages::Jpeg { data: jpeg, w: pxw, h: pxh };
+        let t = ezpzxdw_core::pages::Thumb { rgba: thumb, w: tw, h: th };
+        let r = self.doc.insert_image_page_text(at, w, h, &j, None, (!thumb.is_empty()).then_some(&t), &runs).map_err(|e| self.fail(e))?;
+        self.after();
+        Ok(r)
+    }
+
     /// Copy pages of another DocuWorks file (`pages`: JSON list of page
     /// numbers from 0, or empty for all) to position `at`.
     #[wasm_bindgen(js_name = insertPagesFrom)]
