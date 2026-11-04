@@ -59,7 +59,7 @@ fn path_json(p: &Path, out: &mut String) {
 
 fn display_json(d: &Display) -> String {
     let mut o = String::with_capacity(d.items.len() * 64);
-    let _ = write!(o, "{{\"w\":{},\"h\":{},\"clips\":[", n(d.w), n(d.h));
+    let _ = write!(o, "{{\"w\":{},\"h\":{},\"hidden\":{},\"clips\":[", n(d.w), n(d.h), d.hidden_chars);
     for (k, c) in d.clips.iter().enumerate() {
         if k > 0 {
             o.push(',');
@@ -147,6 +147,34 @@ impl XdwDoc {
     #[wasm_bindgen(constructor)]
     pub fn new(bytes: Vec<u8>) -> Result<XdwDoc, JsError> {
         Ok(XdwDoc::of(Document::open(bytes).map_err(err)?))
+    }
+
+    /// Open with limits given as JSON (`{"maxPages": 300, "maxBytes": 100000000}`;
+    /// see ezpzxdw_core::limits). Past a limit: "too large or damaged: …".
+    #[wasm_bindgen(js_name = openWith)]
+    pub fn open_with(bytes: Vec<u8>, limits: &str) -> Result<XdwDoc, JsError> {
+        let l = ezpzxdw_core::limits::Limits::from_json(limits);
+        Ok(XdwDoc::of(Document::open_with(bytes, &l).map_err(err)?))
+    }
+
+    /// Keep text that something drawn later covers completely (off by
+    /// default: such text is left out of `text`, `render` and the PDF text layer).
+    #[wasm_bindgen(js_name = setIncludeHidden)]
+    pub fn set_include_hidden(&mut self, on: bool) {
+        if self.doc.include_hidden != on {
+            self.doc.include_hidden = on;
+            self.cache.clear();
+        }
+    }
+
+    /// Characters left out of page `page` because they are covered (draws the page).
+    #[wasm_bindgen(js_name = hiddenChars)]
+    pub fn hidden_chars(&mut self, page: usize) -> Result<usize, JsError> {
+        if !self.cache.contains_key(&page) {
+            let d = self.doc.render(page).map_err(err)?;
+            self.cache.insert(page, d);
+        }
+        Ok(self.cache[&page].hidden_chars)
     }
 
     /// A new document: one blank page `w` × `h` (1/100 mm; A4 portrait is

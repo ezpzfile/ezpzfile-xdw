@@ -12,6 +12,9 @@ pub enum Error {
     /// properties are encrypted. DocuWorks can remove the protection for
     /// someone who knows the password.
     Protected,
+    /// Past one of the [`crate::limits::Limits`]: a crafted or damaged file
+    /// that claims far more than it holds, or one too large to handle.
+    TooLarge(String),
 }
 
 impl fmt::Display for Error {
@@ -20,6 +23,7 @@ impl fmt::Display for Error {
             Error::NotXdw(s) => write!(f, "not a DocuWorks file: {s}"),
             Error::Corrupt(s) => write!(f, "damaged file: {s}"),
             Error::Unsupported(s) => write!(f, "unsupported: {s}"),
+            Error::TooLarge(s) => write!(f, "too large or damaged: {s}"),
             Error::Protected => write!(f, "protected: the document is encrypted (password or certificate); remove the protection in DocuWorks first"),
         }
     }

@@ -75,13 +75,16 @@ pub fn info(bmi: &[u8]) -> Option<Info> {
 pub fn decode(bmi: &[u8], bits: &[u8]) -> Option<Image> {
     let inf = info(bmi)?;
     let (w, h) = (inf.w as usize, inf.h as usize);
-    if w == 0 || h == 0 || w.saturating_mul(h) > 120_000_000 {
+    if w == 0 || h == 0 || !crate::limits::image_size(w, h) {
         return None;
     }
     match inf.compression {
         4 => return Some(Image { w: inf.w, h: inf.h, data: ImageData::Jpeg(bits.to_vec()) }),
         5 => return None, // PNG inside a DIB: not seen in DocuWorks files
         _ => {}
+    }
+    if !crate::limits::image(w, h) {
+        return None;
     }
     let mut out = vec![255u8; w * h * 4];
     let put = |out: &mut Vec<u8>, x: usize, row: usize, c: u32| {
@@ -221,7 +224,7 @@ pub fn decode_stored(d: &[u8]) -> Option<Image> {
     let rest = d.get(at..)?;
     if rest.len() >= 16 && u32le(rest, 0) == 1 {
         let (stored, size) = (u32le(rest, 4) as usize, u32le(rest, 8) as usize);
-        if 16 + stored <= rest.len() && size > 0 {
+        if stored <= rest.len() - 16 && size > 0 {
             let bits = crate::lzh::decompress(&rest[16..16 + stored], size).ok()?;
             return decode(&d[..at], &bits);
         }
@@ -250,6 +253,9 @@ pub fn crop(img: &Image, x: u32, y: u32, w: u32, h: u32) -> Option<Image> {
     let w = w.min(img.w.saturating_sub(x));
     let h = h.min(img.h.saturating_sub(y));
     if w == 0 || h == 0 {
+        return None;
+    }
+    if !crate::limits::charge((w as usize) * (h as usize) * 4) {
         return None;
     }
     let mut out = Vec::with_capacity((w * h * 4) as usize);

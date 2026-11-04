@@ -197,9 +197,15 @@ fn read_c_len(r: &mut Bits, pt: &Huff) -> Result<Huff> {
 }
 
 /// Decompress a raw `-lh5-` stream into exactly `out_len` bytes.
+///
+/// `out_len` comes from the file, so it is checked first against the limits
+/// in effect ([`crate::limits`]: at most `maxExpand`, and at most `maxRatio`
+/// times the stored size), and memory grows with what is really decoded
+/// instead of being reserved up front.
 pub fn decompress(src: &[u8], out_len: usize) -> Result<Vec<u8>> {
     const WINDOW: usize = 1 << 13;
-    let mut out = Vec::with_capacity(out_len);
+    crate::limits::expand(src.len(), out_len)?;
+    let mut out = Vec::with_capacity(out_len.min(src.len().saturating_mul(4).saturating_add(4096)));
     let mut r = Bits { b: src, pos: 0 };
     while out.len() < out_len {
         if r.exhausted() {

@@ -83,6 +83,72 @@ function initEngine() {
   return __wbg_init();
 }
 
+/*
+ * Check a file in a Worker before the editor opens it: open it and draw its
+ * pages there. A damaged or crafted file that would use up memory or run for
+ * long then only stops the Worker (its memory goes with it), not this page.
+ * The engine also has its own limits (limits.rs) and at most 1 GiB of memory;
+ * this is the outer wall. Drawing stops after CHECK_MS (a long document is
+ * not refused for being long); a Worker still busy at PREFLIGHT_MS is stopped.
+ */
+const CHECK_MS = 8000;
+const PREFLIGHT_MS = 30000;
+let preflightModule = null;
+async function engineModule() {
+  if (preflightModule) return preflightModule;
+  const src = !WASM_URL.startsWith("/*") ? await (await fetch(WASM_URL)).arrayBuffer() : !WASM_B64.startsWith("/*") ? b64bytes(WASM_B64) : null;
+  if (!src) return null;
+  preflightModule = await WebAssembly.compile(src);
+  return preflightModule;
+}
+async function preflight(bytes) {
+  let mod = null;
+  try { mod = typeof Worker === "function" && GLUE_SRC ? await engineModule() : null; } catch { mod = null; }
+  if (!mod) return { ok: true, skipped: true };
+  const body = `
+self.onmessage = async (e) => {
+  try {
+    await __wbg_init({ module_or_path: e.data.mod });
+    const doc = XdwDoc.openWith(e.data.bytes, "{}");
+    const pages = doc.pageCount();
+    const t0 = Date.now();
+    let drawn = 0;
+    for (; drawn < pages && Date.now() - t0 < ${CHECK_MS}; drawn++) { doc.render(drawn); doc.forget(drawn); }
+    self.postMessage({ ok: true, pages, drawn });
+  } catch (err) {
+    self.postMessage({ ok: false, error: String((err && err.message) || err) });
+  }
+};`;
+  let url;
+  try {
+    url = URL.createObjectURL(new Blob([GLUE_SRC, body], { type: "text/javascript" }));
+    const w = new Worker(url, { type: "module" });
+    return await new Promise((resolve) => {
+      const done = (v) => { clearTimeout(t); w.terminate(); URL.revokeObjectURL(url); resolve(v); };
+      const t = setTimeout(() => done({ ok: false, error: "too large or damaged: timeout" }), PREFLIGHT_MS);
+      w.onmessage = (e) => done(e.data);
+      // the Worker itself could not start (a site policy): open as before
+      w.onerror = (e) => { e.preventDefault?.(); done({ ok: true, skipped: true }); };
+      w.postMessage({ mod, bytes });
+    });
+  } catch {
+    if (url) URL.revokeObjectURL(url);
+    return { ok: true, skipped: true };
+  }
+}
+
+/** Throws "too large or damaged" (or the engine's message) when the Worker check fails. */
+async function checkFirst(bytes) {
+  const pf = await preflight(bytes);
+  if (!pf.ok) {
+    // out of memory inside the engine shows up as a trap ("unreachable") or an allocation message
+    const e = /too large or damaged|unreachable|memory|allocation/i.test(pf.error) ? "too large or damaged" : pf.error;
+    // a protected file is reported as before
+    if (String(pf.error).startsWith("protected")) throw new Error(pf.error);
+    throw new Error(e);
+  }
+}
+
 async function boot() {
   translateDom();
   await initEngine();
@@ -896,6 +962,7 @@ async function openFile(file) {
   if (!(await askDiscard())) return;
   try {
     const buf = new Uint8Array(await file.arrayBuffer());
+    await checkFirst(buf);
     const ed = new XdwDoc(buf);
     useDoc(ed, file.name.replace(/\.(xdw|xbd)$/i, ""));
     if (ed.isSigned()) setTimeout(() => toast(tr("この文書には署名があります。編集して保存すると、署名は無効になります。"), 7000), 400);
@@ -911,6 +978,10 @@ async function openFile(file) {
       return;
     }
     HOST.event("open_fail", { error_code: HOST.errorKind(e), stage: "read" });
+    if (/too large or damaged/.test(msg)) {
+      toast(tr("開けませんでした: ファイルが大きすぎるか、壊れています"), 6000);
+      return;
+    }
     toast(tr("開けませんでした: {0}", msg));
   }
 }
@@ -943,10 +1014,12 @@ async function savePdf(name) {
   toast(tr("PDF を作っています…"), 60000);
   try {
     const parts = [], lens = [], dims = [];
+    let hidden = 0;
     for (let i = 0; i < S.info.length; i++) {
       const c = document.createElement("canvas");
       const k = 150 / 2540; // 150 dpi
       const d = JSON.parse(S.ed.render(i));
+      hidden += d.hidden || 0;
       const imgs = await loadImages(i, d);
       c.width = Math.round(d.w * k); c.height = Math.round(d.h * k);
       paint(c.getContext("2d"), d, imgs, k);
@@ -959,9 +1032,11 @@ async function savePdf(name) {
     let at = 0;
     for (const p of parts) { all.set(p, at); at += p.length; }
     const pdf = S.ed.toPdf(all, new Uint32Array(lens), new Uint32Array(dims), name || S.name);
+    // text under a black box or an opaque picture is not put in the PDF's text
+    if (hidden > 0) toast(tr("覆われて見えない文字 {0} 字は、PDF の文字データに入れずに保存します", hidden), 6000);
     download(pdf, (name || S.name) + ".pdf", "application/pdf");
     HOST.event("save", { kind: "pdf" });
-    toast(tr("PDF を保存しました"));
+    if (!hidden) toast(tr("PDF を保存しました"));
   } catch (e) {
     HOST.event("save_fail", { kind: "pdf", error_code: HOST.errorKind(e) });
     toast(tr("PDF を作れませんでした: {0}", e.message || e));
@@ -1056,6 +1131,8 @@ function closeFind() {
 
 function saveText(name) {
   const t = S.info.map((_, i) => S.ed.text(i)).join("\n\f\n");
+  const hidden = S.info.reduce((n, _, i) => n + S.ed.hiddenChars(i), 0);
+  if (hidden > 0) toast(tr("覆われて見えない文字 {0} 字は、テキストに入れずに保存します", hidden), 6000);
   download(new TextEncoder().encode(t), (name || S.name) + ".txt", "text/plain");
   HOST.event("save", { kind: "txt" });
 }
@@ -1234,6 +1311,7 @@ async function insertOne(f, at) {
   const name = f.name.toLowerCase();
   if (/\.(xdw|xbd)$/.test(name)) {
     const bytes = new Uint8Array(await f.arrayBuffer());
+    await checkFirst(bytes);
     const tmp = new XdwDoc(bytes);
     const n = tmp.pageCount();
     tmp.free();

@@ -34,6 +34,10 @@ pub fn render(b: &[u8], dst: [f64; 4], pics: Pictures, out: &mut Display) {
     }
     let hdr_words = u16le(b, start + 2) as usize;
     let mut i = start + hdr_words * 2;
+    if i > b.len() {
+        out.skipped.push("not a WMF".into());
+        return;
+    }
     // first pass: the window, so drawing before SETWINDOWEXT still lands
     let mut win: Option<([f64; 2], [f64; 2])> = placeable.map(|p| ([p[0], p[1]], [p[2] - p[0], p[3] - p[1]]));
     {
@@ -42,7 +46,7 @@ pub fn render(b: &[u8], dst: [f64; 4], pics: Pictures, out: &mut Display) {
         while j + 6 <= b.len() {
             let n = u32le(b, j) as usize;
             let f = u16le(b, j + 4);
-            if n < 3 || j + 2 * n > b.len() {
+            if n < 3 || n > (b.len() - j) / 2 {
                 break;
             }
             match f {
@@ -76,7 +80,10 @@ pub fn render(b: &[u8], dst: [f64; 4], pics: Pictures, out: &mut Display) {
     while i + 6 <= b.len() {
         let n = u32le(b, i) as usize;
         let f = u16le(b, i + 4);
-        if n < 3 || i + 2 * n > b.len() || f == 0 {
+        if n < 3 || n > (b.len() - i) / 2 || f == 0 {
+            break;
+        }
+        if !crate::limits::record() {
             break;
         }
         let rec = &b[i + 6..i + 2 * n];
@@ -96,6 +103,10 @@ fn new_slot(slots: &mut Vec<bool>) -> u32 {
 }
 
 fn pts(rec: &[u8], at: usize, n: usize) -> Vec<(f64, f64)> {
+    let n = crate::limits::fit(n, rec.len().saturating_sub(at), 4);
+    if !crate::limits::points(n) {
+        return Vec::new();
+    }
     (0..n).map(|k| (i16le(rec, at + 4 * k) as f64, i16le(rec, at + 4 * k + 2) as f64)).collect()
 }
 

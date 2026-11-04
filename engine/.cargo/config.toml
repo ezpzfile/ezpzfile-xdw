@@ -1,0 +1,5 @@
+# The browser engine may use at most 1 GiB of memory. Past that an allocation
+# fails inside the engine (a JS error the page can catch) instead of the tab
+# growing until the browser kills it. Real documents use far less.
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "link-arg=--max-memory=1073741824"]

@@ -15,7 +15,9 @@ USAGE:
   ezpzxdw check  <file>            check values and properties round trip
   ezpzxdw pages  <file>            pages and the objects on them
   ezpzxdw render <file> [page]     what drawing a page produces (summary)
-  ezpzxdw text   <file>            text of every page
+  ezpzxdw text   <file> [--include-hidden]
+                                 text of every page (text that a box or picture
+                                 drawn later covers is left out unless asked for)
   ezpzxdw set-attr <in> <record> <tag> <value> <out>
                                  change one attribute (value: hex:…, u16:text, int:a,b, del)
   ezpzxdw edit   <in> <ops.json> <out>
@@ -225,7 +227,8 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                 for s in &disp.skipped {
                     *sk.entry(s.clone()).or_insert(0) += 1;
                 }
-                writeln!(out, "page {}: {:?} clips {} images {} skipped {:?}", k + 1, counts, disp.clips.len(), disp.images.len(), sk)?;
+                let hidden = if disp.hidden_chars > 0 { format!(" hidden {}", disp.hidden_chars) } else { String::new() };
+                writeln!(out, "page {}: {:?} clips {} images {} skipped {:?}{hidden}", k + 1, counts, disp.clips.len(), disp.images.len(), sk)?;
             }
         }
         "images" => {
@@ -255,9 +258,20 @@ fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             writeln!(out, "{}", serde_json::to_string(&d.render(n)?)?)?;
         }
         "text" => {
-            let d = ezpzxdw_core::doc::Document::open(b.clone())?;
-            for (k, t) in d.text().iter().enumerate() {
-                writeln!(out, "--- page {}\n{t}", k + 1)?;
+            let mut d = ezpzxdw_core::doc::Document::open(b.clone())?;
+            d.include_hidden = a.iter().any(|x| x == "--include-hidden");
+            let mut hidden = 0;
+            for k in 0..d.pages.len() {
+                match d.render(k) {
+                    Ok(disp) => {
+                        hidden += disp.hidden_chars;
+                        writeln!(out, "--- page {}\n{}", k + 1, disp.text())?;
+                    }
+                    Err(e) => writeln!(out, "--- page {} (not readable: {e})", k + 1)?,
+                }
+            }
+            if hidden > 0 {
+                eprintln!("{hidden} characters covered by something drawn on top were left out (--include-hidden keeps them)");
             }
         }
         "add-named" => {

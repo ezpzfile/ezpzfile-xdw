@@ -27,6 +27,7 @@
 //!
 //! Everything is turned into a `gfx::Display`.
 
+use crate::limits;
 use crate::dib;
 use crate::gfx::{Clip, Display, Image, ImageData, Item, Path, Seg, Xf};
 use std::collections::HashMap;
@@ -188,7 +189,7 @@ fn first_window(b: &[u8]) -> Option<((f64, f64), (f64, f64))> {
     while i + 8 <= b.len() {
         let t = u32le(b, i);
         let n = u32le(b, i + 4) as usize;
-        if n < 8 || i + n > b.len() {
+        if n < 8 || n > b.len() - i {
             break;
         }
         match t {
@@ -245,7 +246,10 @@ pub fn render_opts(b: &[u8], dst: [f64; 4], pics: Pictures, out: &mut Display, f
     while i + 8 <= b.len() {
         let t = u32le(b, i);
         let n = u32le(b, i + 4) as usize;
-        if n < 8 || i + n > b.len() {
+        if n < 8 || n > b.len() - i {
+            break;
+        }
+        if !limits::record() {
             break;
         }
         let rec = &b[i..i + n];
@@ -349,6 +353,7 @@ impl<'a> R<'a> {
         let idx = if let Some(&v) = self.clip_cache.get(&sig) {
             v
         } else {
+            limits::item(paths.iter().map(|p| p.0.len()).sum());
             self.out.clips.push(Clip(paths));
             let v = (self.out.clips.len() - 1) as u32;
             self.clip_cache.insert(sig, v);
@@ -369,6 +374,9 @@ impl<'a> R<'a> {
         let clip = self.clip_index();
         let evenodd = self.dc.fill_mode == 1;
         let mul = self.dc.rop2 == 9;
+        if !limits::item(path.0.len()) {
+            return;
+        }
         self.out.items.push(Item::Fill { path, color: rgb(self.dc.brush.color), evenodd, clip, mul });
     }
     pub(crate) fn stroke(&mut self, path: Path) {
@@ -407,6 +415,9 @@ impl<'a> R<'a> {
         };
         let color = rgb(p.color);
         let clip = self.clip_index();
+        if !limits::item(path.0.len() + dash.len()) {
+            return;
+        }
         self.out.items.push(Item::Stroke { path, color, width, dash, cap, join, clip });
     }
 
@@ -467,6 +478,8 @@ impl<'a> R<'a> {
     /// An ellipse arc as Bézier pieces (logical coordinates), from angle
     /// a0 sweeping `sweep` radians (positive = counter-clockwise on screen).
     pub(crate) fn arc_pts(cx: f64, cy: f64, rx: f64, ry: f64, a0: f64, sweep: f64) -> Vec<(f64, f64)> {
+        // more than two turns draws nothing new
+        let sweep = if sweep.is_finite() { sweep.clamp(-4.0 * std::f64::consts::PI, 4.0 * std::f64::consts::PI) } else { 0.0 };
         let n = ((sweep.abs() / std::f64::consts::FRAC_PI_2).ceil() as usize).max(1);
         let step = sweep / n as f64;
         let k = 4.0 / 3.0 * (step / 4.0).tan();
@@ -613,6 +626,11 @@ impl<'a> R<'a> {
         let (x2, y2) = self.xf().apply(dst[0], dst[1] + dst[3]);
         let m = [(x1 - x0) as f32, (y1 - y0) as f32, (x2 - x0) as f32, (y2 - y0) as f32, x0 as f32, y0 as f32];
         let clip = self.clip_index();
+        if let ImageData::Rgba(px) = &img.data {
+            if !limits::charge(px.len()) {
+                return;
+            }
+        }
         self.out.images.push(img);
         let image = (self.out.images.len() - 1) as u32;
         self.out.items.push(Item::Image { image, m, clip, alpha: 1.0, mul: rop == 0x8800C6 });
@@ -637,6 +655,9 @@ impl<'a> R<'a> {
         }
         let p = self.poly_path(&Self::rect_points([dst[0], dst[1], dst[0] + dst[2], dst[1] + dst[3]]), true);
         let clip = self.clip_index();
+        if !limits::item(p.0.len()) {
+            return;
+        }
         self.out.items.push(Item::Fill { path: p, color, evenodd: false, clip, mul: false });
     }
 
@@ -650,14 +671,15 @@ impl<'a> R<'a> {
         let rcl = [i32le(rec, 56) as f64, i32le(rec, 60) as f64, i32le(rec, 64) as f64, i32le(rec, 68) as f64];
         let off_dx = u32le(rec, 72) as usize;
         let step = if opts & 0x2000 != 0 { 2 } else { 1 };
-        let dx: Vec<f64> = if off_dx > 0 { (0..n).map(|k| i32le(rec, off_dx + 4 * k * step) as f64).collect() } else { Vec::new() };
+        let n = limits::fit(n, rec.len().saturating_sub(off), if wide { 2 } else { 1 });
+        let dx: Vec<f64> = if off_dx > 0 { (0..limits::fit(n, rec.len().saturating_sub(off_dx), 4 * step)).map(|k| i32le(rec, off_dx + 4 * k * step) as f64).collect() } else { Vec::new() };
         let (text, per_char) = if wide {
             let units: Vec<u16> = (0..n).map(|k| i16le(rec, off + 2 * k) as u16).collect();
             let text = String::from_utf16_lossy(&units);
             let lens: Vec<usize> = text.chars().map(|c| c.len_utf16()).collect();
             (text, lens)
         } else {
-            let raw = rec.get(off..off + n).unwrap_or(&[]);
+            let raw = rec.get(off..off.saturating_add(n)).unwrap_or(&[]);
             sjis_chars(raw)
         };
         let adv = group_advances(&dx, &per_char);
@@ -670,7 +692,9 @@ impl<'a> R<'a> {
         if opts & 0x2 != 0 && rcl[2] > rcl[0] && rcl[3] > rcl[1] {
             let p = self.poly_path(&Self::rect_points(rcl), true);
             let clip = self.clip_index();
-            self.out.items.push(Item::Fill { path: p, color: rgb(self.dc.bk_color), evenodd: false, clip, mul: false });
+            if limits::item(p.0.len()) {
+                self.out.items.push(Item::Fill { path: p, color: rgb(self.dc.bk_color), evenodd: false, clip, mul: false });
+            }
         }
         if text.is_empty() {
             return;
@@ -747,6 +771,9 @@ impl<'a> R<'a> {
         let sx = if f.width != 0 && h != 0.0 { (f.width.unsigned_abs() as f64 / (em_l / 2.0)) as f32 } else { 1.0 };
         let clip = self.clip_index();
         let face = f.face.trim_start_matches('@').to_string();
+        if !limits::item(text.chars().count() + xs.len()) {
+            return;
+        }
         self.out.items.push(Item::Text {
             x: px0 as f32,
             y: py0 as f32,
@@ -768,7 +795,7 @@ impl<'a> R<'a> {
 
     pub(crate) fn dw(&mut self, rec: &[u8]) {
         // GDICOMMENT: type, size, cbData, data
-        let data = &rec[12..];
+        let data = rec.get(12..).unwrap_or(&[]);
         if data.len() < 4 || &data[..2] != b"DW" {
             return;
         }
@@ -876,9 +903,17 @@ impl<'a> R<'a> {
     pub(crate) fn record(&mut self, t: u32, rec: &[u8]) {
         let p = |k: usize| i32le(rec, 8 + 4 * k) as f64;
         let pts32 = |at: usize, n: usize| -> Vec<(f64, f64)> {
+            let n = limits::fit(n, rec.len().saturating_sub(at), 8);
+            if !limits::points(n) {
+                return Vec::new();
+            }
             (0..n).map(|k| (i32le(rec, at + 8 * k) as f64, i32le(rec, at + 8 * k + 4) as f64)).collect()
         };
         let pts16 = |at: usize, n: usize| -> Vec<(f64, f64)> {
+            let n = limits::fit(n, rec.len().saturating_sub(at), 4);
+            if !limits::points(n) {
+                return Vec::new();
+            }
             (0..n).map(|k| (i16le(rec, at + 4 * k) as f64, i16le(rec, at + 4 * k + 2) as f64)).collect()
         };
         match t {
@@ -887,7 +922,7 @@ impl<'a> R<'a> {
             2 | 3 | 4 | 5 | 6 | 85 | 86 | 87 | 88 | 89 => {
                 let n = u32le(rec, 24) as usize;
                 let small = t >= 85;
-                if rec.len() < 28 + n * if small { 4 } else { 8 } {
+                if n > (rec.len().saturating_sub(28)) / if small { 4 } else { 8 } {
                     return;
                 }
                 let pts = if small { pts16(28, n) } else { pts32(28, n) };
@@ -940,6 +975,7 @@ impl<'a> R<'a> {
                 let polys = u32le(rec, 24) as usize;
                 let total = u32le(rec, 28) as usize;
                 let small = t >= 90;
+                let polys = limits::fit(polys, rec.len().saturating_sub(32), 4);
                 let counts: Vec<usize> = (0..polys).map(|k| u32le(rec, 32 + 4 * k) as usize).collect();
                 let at = 32 + 4 * polys;
                 let all = if small { pts16(at, total) } else { pts32(at, total) };
@@ -1123,8 +1159,8 @@ impl<'a> R<'a> {
                 self.dc.cur = (x, y);
             }
             56 | 92 => {
-                let n = u32le(rec, 24) as usize;
                 let small = t == 92;
+                let n = limits::fit(u32le(rec, 24) as usize, rec.len().saturating_sub(28), if small { 5 } else { 9 });
                 let pts = if small { pts16(28, n) } else { pts32(28, n) };
                 let types_at = 28 + n * if small { 4 } else { 8 };
                 let mut segs = Vec::new();
@@ -1199,8 +1235,8 @@ impl<'a> R<'a> {
                     }
                     return;
                 }
-                let d = &rec[16..];
-                let n = u32le(d, 8) as usize;
+                let d = rec.get(16..).unwrap_or(&[]);
+                let n = limits::fit(u32le(d, 8) as usize, d.len().saturating_sub(32), 16);
                 let mut segs = Vec::new();
                 for k in 0..n {
                     let at = 32 + 16 * k;
@@ -1290,7 +1326,7 @@ impl<'a> R<'a> {
             }
             82 => {
                 let h = u32le(rec, 8);
-                let lf = &rec[12..];
+                let lf = rec.get(12..).unwrap_or(&[]);
                 let face_units: Vec<u16> = (0..32).map(|k| i16le(lf, 28 + 2 * k) as u16).take_while(|&c| c != 0).collect();
                 self.objs.insert(
                     h,
@@ -1314,7 +1350,7 @@ impl<'a> R<'a> {
                 let style = u32le(rec, 28);
                 let width = u32le(rec, 32) as f64;
                 let color = u32le(rec, 40);
-                let n = u32le(rec, 48) as usize;
+                let n = limits::fit(u32le(rec, 48) as usize, rec.len().saturating_sub(52), 4);
                 let dash = if style & 0xf == 7 { (0..n).map(|k| u32le(rec, 52 + 4 * k) as f64).collect() } else { vec![] };
                 self.objs.insert(h, Obj::Pen(Pen { style, width, color, geometric: style & 0x10000 != 0, dash }));
             }
@@ -1380,7 +1416,10 @@ pub fn dw_points(p: &[u8], enc: u8) -> Vec<(f64, f64)> {
     if n == 0 || p.len() < 8 {
         return Vec::new();
     }
-    let mut out = Vec::with_capacity(n);
+    if !limits::points(n.min(p.len())) {
+        return Vec::new();
+    }
+    let mut out = Vec::with_capacity(n.min(p.len()));
     let (mut x, mut y) = (i16le(p, 4) as f64, i16le(p, 6) as f64);
     out.push((x, y));
     let mut i = 8;
@@ -1437,7 +1476,7 @@ pub fn single_dib(b: &[u8]) -> Option<Image> {
     let mut i = 0;
     while i + 8 <= b.len() {
         let (t, n) = (u32le(b, i), u32le(b, i + 4) as usize);
-        if n < 8 || i + n > b.len() || t == 14 {
+        if n < 8 || n > b.len() - i || t == 14 {
             return None;
         }
         if t == 81 {
@@ -1454,9 +1493,17 @@ pub fn external_picture(d: &[u8]) -> Option<(Image, bool)> {
     if d.len() > 18 && d[16] == 0xff && d[17] == 0xd8 {
         let w = u32le(d, 8);
         let h = u32le(d, 12);
+        if !limits::image_size(w as usize, h as usize) {
+            return None;
+        }
         return Some((Image { w, h, data: ImageData::Jpeg(d[16..].to_vec()) }, false));
     }
     if d.len() > 2 && d[0] == 0xff && d[1] == 0xd8 {
+        if let Some((w, h)) = crate::pages::jpeg_size(d) {
+            if !limits::image_size(w as usize, h as usize) {
+                return None;
+            }
+        }
         return Some((Image { w: 0, h: 0, data: ImageData::Jpeg(d.to_vec()) }, false));
     }
     // a DIB: BITMAPINFOHEADER then bits (possibly compressed, see dib)

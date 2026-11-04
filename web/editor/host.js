@@ -57,6 +57,7 @@ const HOST = (() => {
   function errorKind(err) {
     const text = String((err && (err.message || err)) || "");
     if (/password|encrypt|protect|暗号|パスワード/i.test(text)) return "password";
+    if (/too large/i.test(text)) return "too_large";
     if (/memory|allocation|out of bounds|unreachable/i.test(text)) return "memory";
     if (/unsupported|not supported|not a |format|signature|magic|対応/i.test(text)) return "unsupported";
     if (/parse|corrupt|invalid|damaged|broken|truncat|壊れ/i.test(text)) return "damaged";

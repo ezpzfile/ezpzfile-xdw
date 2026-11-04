@@ -139,6 +139,9 @@ pub struct Display {
     pub images: Vec<Image>,
     /// Things the renderer could not draw (record names), for diagnostics.
     pub skipped: Vec<String>,
+    /// Characters left out because something drawn later covers them
+    /// completely (see `hidden`).
+    pub hidden_chars: usize,
 }
 
 impl Display {
@@ -199,5 +202,15 @@ impl Xf {
     }
     pub fn scale_y(&self) -> f64 {
         (self.0[2] * self.0[2] + self.0[3] * self.0[3]).sqrt()
+    }
+}
+
+impl Image {
+    /// "jpeg" or "rgba", for diagnostics.
+    pub fn data_kind(&self) -> &'static str {
+        match self.data {
+            ImageData::Jpeg(_) => "jpeg",
+            ImageData::Rgba(_) => "rgba",
+        }
     }
 }

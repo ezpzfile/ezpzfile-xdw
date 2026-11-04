@@ -21,6 +21,7 @@ use crate::container::{Body, Container, Entry};
 use crate::emf;
 use crate::error::{Error, Result};
 use crate::gfx::{Display, Image, ImageData, Item, Path};
+use crate::limits::{self, Limits};
 use crate::lzh;
 use crate::props::{self, Record};
 use crate::tlv;
@@ -119,6 +120,12 @@ pub struct Document {
     /// Entries added since opening (numbered after the file's own); they
     /// are written by the next save, if still referenced.
     pub pending: Vec<write::NewEntry>,
+    /// Limits for reading this document and drawing its pages.
+    pub limits: Limits,
+    /// Keep text that something drawn later covers completely (a black box,
+    /// an opaque picture) in [`Document::render`]'s text, [`Document::text`]
+    /// and the PDF text layer. Off by default: covered text is left out.
+    pub include_hidden: bool,
 }
 
 /// An entry's body: field list (starts with 0x80) or raw data.
@@ -160,13 +167,35 @@ pub enum Drawing {
 }
 
 impl Document {
+    /// Open a document with the default [`Limits`].
     pub fn open(bytes: Vec<u8>) -> Result<Document> {
-        let container = Container::parse(&bytes)?;
-        let records = props::parse(&container.properties(&bytes)?)?;
-        let entries = container.entries(&bytes)?;
-        let mut d = Document { bytes, container, records, entries, pages: Vec::new(), ext_defs: Default::default(), pending: Vec::new() };
-        d.refresh();
-        Ok(d)
+        Document::open_with(bytes, &Limits::default())
+    }
+
+    /// Open a document; reading it and drawing its pages stay within
+    /// `limits` (past one: [`Error::TooLarge`]).
+    pub fn open_with(bytes: Vec<u8>, limits: &Limits) -> Result<Document> {
+        limits::scope(limits, || {
+            let container = Container::parse(&bytes)?;
+            let records = props::parse(&container.properties(&bytes)?)?;
+            let entries = container.entries(&bytes)?;
+            let mut d = Document {
+                bytes,
+                container,
+                records,
+                entries,
+                pages: Vec::new(),
+                ext_defs: Default::default(),
+                pending: Vec::new(),
+                limits: *limits,
+                include_hidden: false,
+            };
+            d.refresh();
+            if d.pages.len() > limits.max_pages {
+                return Err(Error::TooLarge(format!("{} pages (limit maxPages {})", d.pages.len(), limits.max_pages)));
+            }
+            Ok(d)
+        })
     }
 
     /// Body of entry `n` (the file's own or one added since opening).
@@ -313,14 +342,26 @@ impl Document {
             .collect()
     }
 
-    /// Draw page `n`.
+    /// Draw page `n`, within the document's limits. Text that a later
+    /// opaque fill or picture covers completely is left out unless
+    /// `include_hidden` is set ([`Display::hidden_chars`] says how much).
     pub fn render(&self, n: usize) -> Result<Display> {
         let page = self.pages.get(n).ok_or_else(|| Error::Unsupported(format!("no page {n}")))?;
-        let mut out = Display::new(page.w as f32, page.h as f32);
-        for o in &page.objects {
-            self.render_object(o, &mut out);
-        }
-        Ok(out)
+        limits::scope(&self.limits, || {
+            let mut out = Display::new(page.w as f32, page.h as f32);
+            let mut starts = Vec::with_capacity(page.objects.len());
+            for o in &page.objects {
+                if limits::over() {
+                    break;
+                }
+                starts.push(out.items.len());
+                self.render_object(o, &mut out);
+            }
+            if !self.include_hidden {
+                crate::hidden::remove_covered(&mut out, Some(&starts));
+            }
+            Ok(out)
+        })
     }
 
     /// The pixels of a picture annotation: DocuWorks' bitmap annotation
@@ -374,7 +415,7 @@ impl Document {
             }
             5 => {
                 // a scanned page as DocuWorks 10 stores it: a JPEG
-                match crate::pages::jpeg_size(&c.data) {
+                match crate::pages::jpeg_size(&c.data).filter(|&(pw, ph)| limits::image_size(pw as usize, ph as usize) && limits::charge(c.data.len())) {
                     Some((pw, ph)) => {
                         out.images.push(Image { w: pw, h: ph, data: ImageData::Jpeg(c.data.clone()) });
                         let image = (out.images.len() - 1) as u32;
