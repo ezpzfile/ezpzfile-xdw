@@ -12,7 +12,7 @@
 富士フイルム（旧富士ゼロックス）DocuWorks のファイルを扱うための、ゼロから作ったオープンソースの
 エンジン・エディタ・ファイル形式仕様書です。ファイルは端末の外に送信されません。
 
-状態: **v0.2。`.xdw` / `.xbd` に保存し直せるビューア + エディタ（開発者向けプレビュー）。**
+状態: **v0.3。`.xdw` / `.xbd` に保存し直せるビューア + エディタ（開発者向けプレビュー）。**
 富士フイルムビジネスイノベーション株式会社とは関係ありません。
 
 [![XDW エディタの画面](docs/images/editor.png)](https://ezpzfile.com/ja/xdw-editor)
@@ -36,9 +36,16 @@
   下の文字を見せることもでき、DocuWorks でも同じに見える
 - ページ内の **文字の選択・コピー**、**文書内の検索**（Ctrl+F）
 - ページ: 左右に回転、削除、並べ替え（ページ一覧でドラッグ）。白紙ページ、画像（JPEG / PNG など）、
-  別の `.xdw` / `.xbd` のページ、PDF のページ（画像として。pdf.js のために最初の 1 回だけネット接続が必要）の **挿入**
+  別の `.xdw` / `.xbd` のページ、PDF のページ（画像として。PDF の文字も画像の下に残るので検索・コピーできる。
+  pdf.js のために最初の 1 回だけネット接続が必要）の **挿入**
 - **バインダー（`.xbd`）**: ページ一覧に文書ごとに表示。`.xdw` の追加、名前の変更、並べ替え、取り外し
 - 書き出し: **PDF**（画面と同じ見た目、文字の検索・コピー可）、テキスト。印刷
+- **覆われた文字を残さない**: 黒い四角形のアノテーションや不透明な画像で覆った文字は、取り出したテキストにも
+  PDF の文字層にも入れない（見た目どおりに伏せた部分が、コピーや検索で戻らない）。エディタは保存のときに
+  何文字を外したかを知らせる。残したいときは `includeHidden`
+- **信頼できないファイルへの備え**: ファイルに書かれた大きさや個数をそのまま信じず、上限を超えるファイルは
+  「too large or damaged（大きすぎるか壊れている）」として止める。ブラウザでは Web Worker の中で確かめてから開く
+  （下の「信頼できないファイルを開く」）
 - 元に戻す / やり直し
 
 ファイル形式の解析結果（DocuWorks が確認する検査値、ドライバ独自の描画レコードなど）は
@@ -53,6 +60,42 @@
 まだできないこと: 署名の有効性の確認、新しい署名・パスワードを付けること。
 詳しくは [計画](docs/PLAN.ja.md)
 （[English](docs/PLAN.en.md)、[한국어](docs/PLAN.ko.md)）を参照。
+
+## 信頼できないファイルを開く
+
+`.xdw` は圧縮データの展開後の大きさ、画像の画素数、線の点の数などを自分で書いています。細工したファイルは
+中身よりずっと大きな数を書けるので（数百バイトで「展開すると 4 GB」など）、エンジンはそれをそのまま信じず、
+実際にあるデータと照らし合わせ、次の上限で止めます。既定値は本物の文書が必要とする量よりずっと上です
+（公開サンプルのいちばん大きい値でも、どの上限の 3 割以下）。
+
+| 上限 | 既定値 | 数えるもの |
+|---|---|---|
+| `maxBytes` | 768 MB | 1 回の読み込み、または 1 ページの描画で使う作業メモリ（展開したデータと画像の合計） |
+| `maxExpand` | 256 MB | 圧縮データ 1 つを展開した大きさ |
+| `maxRatio` | 1000 倍 | 圧縮データ 1 つの、展開後と保存時の大きさの比 |
+| `maxPages` | 20,000 | 文書のページ数 |
+| `maxImagePixels` | 1 億 | 画像 1 つの画素数 |
+| `maxRecords` | 100 万 | 1 ページの描画レコード数 |
+| `maxPoints` | 500 万 | 1 ページの線の点と文字の数 |
+
+超えると「too large or damaged: …」のエラーになります。ほかのサービスに組み込むときは上限を下げ、Web Worker の中で
+動かしてください。`web/worker/ezpzxdw-safe.js` がそれを行い、時間切れの Worker を止めます。ブラウザ用のエンジンは
+最大 1 GiB のメモリしか使いません。
+
+```js
+import { readXdwSafely } from "./worker/ezpzxdw-safe.js";
+const { result, hiddenChars } = await readXdwSafely(bytes, { want: "text", limits: { maxPages: 300 }, timeoutMs: 15000 });
+// 直接: XdwDoc.openWith(bytes, '{"maxPages":300}')
+```
+
+Rust では `Document::open_with(bytes, &Limits { max_pages: 300, ..Default::default() })`。
+
+覆われた文字: 各文字の枠（送り幅の内側、ベースラインから 0.7 em 上まで）が、あとから描かれた不透明な塗り（白も含む）か
+不透明な画像に、クリップの範囲も含めて完全に入っていれば外します。蛍光ペン（掛け合わせ）、半透明の画像、線は覆いと
+見なしません。文字と同じ描画の中の画像も覆いと見なしません（文字認識したスキャンや PDF から取り込んだページは、
+文字を画像の下に置いているため）。残すには `XdwDoc.setIncludeHidden(true)`、Rust では `doc.include_hidden = true`、
+コマンドでは `ezpzxdw text file.xdw --include-hidden`。
+`.xdw` として保存したファイルには、DocuWorks と同じく覆われた文字もそのまま残ります。伏せた文書を渡すときは PDF で保存してください。
 
 ## エディタ
 
@@ -87,6 +130,7 @@ engine/crates/ezpzxdw-core   読み込み、描画（EMF/WMF/DW → 表示リス
 engine/crates/ezpzxdw-cli    `ezpzxdw` コマンド: info, tree, pages, render, text, edit, check …
 engine/crates/ezpzxdw-wasm   ブラウザ用バインディング
 web/                       エディタ（ビルド: web/build.sh → web/dist/ezpzxdw-editor.html）
+web/worker/                信頼できないファイルを Web Worker で読む（ezpzxdw-safe.js）
 docs/spec/XDW-FORMAT.md    ファイル形式（英語）
 docs/PLAN.{ja,en,ko}.md    計画と進捗（日本語、English、한국어）
 tools/dwview               DocuWorks Viewer Light を審判にする（Wine）

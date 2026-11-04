@@ -12,7 +12,7 @@
 후지필름(옛 후지제록스) DocuWorks 파일을 다루는 오픈소스 엔진·편집기·파일 형식 규격서입니다.
 처음부터 새로 만들었고 파일은 기기 밖으로 보내지 않습니다.
 
-상태: **v0.2. `.xdw` / `.xbd`로 다시 저장하는 뷰어 + 편집기(개발자 미리보기).**
+상태: **v0.3. `.xdw` / `.xbd`로 다시 저장하는 뷰어 + 편집기(개발자 미리보기).**
 후지필름 비즈니스 이노베이션과는 관계없습니다.
 
 [![XDW 편집기 화면](docs/images/editor.png)](https://ezpzfile.com/ja/xdw-editor)
@@ -35,9 +35,14 @@
   보이게 할 수 있고, DocuWorks에서도 똑같이 보임
 - 쪽 안 **글자 선택·복사**, **문서 안 찾기**(Ctrl+F)
 - 쪽: 왼쪽·오른쪽 회전, 삭제, 순서 바꾸기(쪽 목록에서 끌기). 빈 쪽, 그림(JPEG / PNG 등), 다른 `.xdw` /
-  `.xbd`의 쪽, PDF 쪽(그림으로. pdf.js 때문에 처음 한 번은 인터넷 필요) **넣기**
+  `.xbd`의 쪽, PDF 쪽(그림으로. PDF의 글자도 그림 밑에 남아 찾기·복사 가능. pdf.js 때문에 처음 한 번은 인터넷 필요) **넣기**
 - **바인더(`.xbd`)**: 쪽 목록에 문서별로 표시. `.xdw` 추가, 이름 바꾸기, 순서 바꾸기, 빼기
 - 내보내기: **PDF**(화면과 같은 모양, 글자 검색·복사 가능), 텍스트. 인쇄
+- **가린 글자는 남기지 않음**: 검은 사각형 주석이나 불투명한 그림으로 가린 글자는 뽑은 텍스트에도 PDF 글자 층에도
+  넣지 않음(보이는 대로 가린 부분이 복사나 찾기로 되살아나지 않음). 편집기는 저장할 때 몇 글자를 뺐는지 알려 줌.
+  남기려면 `includeHidden`
+- **믿을 수 없는 파일 대비**: 파일에 적힌 크기와 개수를 그대로 믿지 않고, 상한을 넘는 파일은 "too large or damaged
+  (너무 크거나 깨짐)"로 멈춤. 브라우저에서는 Web Worker 안에서 확인한 뒤 엶(아래 "믿을 수 없는 파일 열기")
 - 되돌리기 / 다시 하기
 
 DocuWorks가 확인하는 검사값, 드라이버 전용 그리기 기록 등 파일 형식 분석 결과는
@@ -52,6 +57,42 @@ DocuWorks가 확인하는 검사값, 드라이버 전용 그리기 기록 등 �
 아직 안 되는 것: 서명이 지금도 유효한지 확인, 새 서명·암호 달기.
 자세한 내용은 [계획](docs/PLAN.ko.md)
 ([日本語](docs/PLAN.ja.md), [English](docs/PLAN.en.md)).
+
+## 믿을 수 없는 파일 열기
+
+`.xdw`는 압축 데이터를 풀었을 때의 크기, 그림의 화소 수, 선의 점 개수 등을 스스로 적어 둡니다. 조작한 파일은
+실제 내용보다 훨씬 큰 수를 적을 수 있어서(몇백 바이트로 "풀면 4 GB" 등), 엔진은 그 수를 그대로 믿지 않고 실제로
+있는 데이터와 맞춰 보며 아래 상한에서 멈춥니다. 기본값은 실제 문서에 필요한 양보다 훨씬 큽니다(공개 견본의 가장 큰
+값도 모든 상한의 30% 이하).
+
+| 상한 | 기본값 | 세는 것 |
+|---|---|---|
+| `maxBytes` | 768 MB | 문서 한 번 열기, 또는 한 쪽 그리기에 쓰는 작업 메모리(푼 데이터와 그림의 합) |
+| `maxExpand` | 256 MB | 압축 데이터 하나를 푼 크기 |
+| `maxRatio` | 1000배 | 압축 데이터 하나의 푼 크기 대 저장 크기 |
+| `maxPages` | 20,000 | 문서의 쪽 수 |
+| `maxImagePixels` | 1억 | 그림 하나의 화소 수 |
+| `maxRecords` | 100만 | 한 쪽의 그리기 기록 수 |
+| `maxPoints` | 500만 | 한 쪽의 선 점과 글자 수 |
+
+넘으면 "too large or damaged: …" 오류가 납니다. 다른 서비스에 넣을 때는 상한을 낮추고 Web Worker 안에서 돌리세요.
+`web/worker/ezpzxdw-safe.js`가 그렇게 해 주고, 시간을 넘긴 Worker는 멈춥니다. 브라우저용 엔진은 메모리를 최대
+1 GiB까지만 씁니다.
+
+```js
+import { readXdwSafely } from "./worker/ezpzxdw-safe.js";
+const { result, hiddenChars } = await readXdwSafely(bytes, { want: "text", limits: { maxPages: 300 }, timeoutMs: 15000 });
+// 직접: XdwDoc.openWith(bytes, '{"maxPages":300}')
+```
+
+Rust에서는 `Document::open_with(bytes, &Limits { max_pages: 300, ..Default::default() })`.
+
+가린 글자: 글자의 틀(보내기 폭 안쪽, 기준선에서 0.7 em 위까지)이 나중에 그려진 불투명한 칠(흰색 포함)이나 불투명한
+그림 안에, 그 클립 범위까지 포함해 완전히 들어가면 뺍니다. 형광펜(곱하기), 반투명한 그림, 선은 가리개로 보지 않습니다.
+글자와 같은 그림 안의 그림도 가리개로 보지 않습니다(문자 인식한 스캔이나 PDF에서 가져온 쪽은 글자를 그림 밑에 두기
+때문). 남기려면 `XdwDoc.setIncludeHidden(true)`, Rust에서는 `doc.include_hidden = true`, 명령에서는
+`ezpzxdw text file.xdw --include-hidden`.
+`.xdw`로 저장한 파일에는 DocuWorks와 같이 가린 글자도 그대로 남습니다. 가린 문서를 건넬 때는 PDF로 저장하세요.
 
 ## 편집기
 
@@ -85,6 +126,7 @@ engine/crates/ezpzxdw-core   읽기, 그리기(EMF/WMF/DW → 표시 목록), �
 engine/crates/ezpzxdw-cli    `ezpzxdw` 명령: info, tree, pages, render, text, edit, check …
 engine/crates/ezpzxdw-wasm   브라우저용 연결
 web/                       편집기(빌드: web/build.sh → web/dist/ezpzxdw-editor.html)
+web/worker/                믿을 수 없는 파일을 Web Worker에서 읽기 (ezpzxdw-safe.js)
 docs/spec/XDW-FORMAT.md    파일 형식(영어)
 docs/PLAN.{ja,en,ko}.md    계획과 진행 상황(日本語, English, 한국어)
 tools/dwview               DocuWorks Viewer Light를 심판으로(Wine)

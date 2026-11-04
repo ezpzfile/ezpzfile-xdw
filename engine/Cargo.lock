@@ -36,7 +36,7 @@ dependencies = [
 
 [[package]]
 name = "ezpzxdw-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "ezpzxdw-core",
  "serde_json",
@@ -44,7 +44,7 @@ dependencies = [
 
 [[package]]
 name = "ezpzxdw-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "encoding_rs",
  "serde",
@@ -53,7 +53,7 @@ dependencies = [
 
 [[package]]
 name = "ezpzxdw-wasm"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "ezpzxdw-core",
  "serde",

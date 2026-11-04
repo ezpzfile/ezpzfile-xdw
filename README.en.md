@@ -12,7 +12,7 @@
 An open-source engine, editor and format specification for FUJIFILM (Fuji Xerox)
 DocuWorks files, built from scratch. Files never leave your device.
 
-Status: **v0.2, viewer + editor that saves back to `.xdw` / `.xbd` (developer preview).**
+Status: **v0.3, viewer + editor that saves back to `.xdw` / `.xbd` (developer preview).**
 Not affiliated with FUJIFILM Business Innovation.
 
 [![The XDW editor](docs/images/editor.png)](https://ezpzfile.com/xdw-editor)
@@ -40,10 +40,18 @@ Tested on 43 public DocuWorks files (generation 7 and 10, `.xdw` and `.xbd`):
 - **select and copy text** in pages, **search** the document (Ctrl+F)
 - pages: turn left / right, delete, reorder (drag in the page list);
   **insert** a blank page, pictures (JPEG / PNG / …), pages of another `.xdw` /
-  `.xbd`, or PDF pages (as pictures; needs the network once for pdf.js)
+  `.xbd`, or PDF pages (as pictures, with the PDF's text kept under the picture so it can be
+  searched and copied; needs the network once for pdf.js)
 - **binders (`.xbd`)**: documents shown in the page list; add `.xdw` files,
   rename, reorder, remove documents
 - export: **PDF** (looks like the screen, text searchable/copyable), plain text; print
+- **covered text stays covered**: text blacked out with a rectangle annotation or an opaque
+  picture is left out of the extracted text and of the PDF text layer, so what looks redacted
+  does not come back by copying or searching. The editor says how many characters it left out
+  when saving. `includeHidden` keeps them
+- **safe with untrusted files**: sizes and counts written in a file are not trusted; a file past
+  the limits stops with "too large or damaged". In the browser a file is checked in a Web Worker
+  before it opens (see "Opening untrusted files")
 - undo / redo
 
 The format findings, including the check value DocuWorks verifies and the
@@ -60,6 +68,45 @@ handles passwords).
 Not yet: verifying that a signature still holds, and adding signatures or
 passwords. See the [plan](docs/PLAN.en.md)
 ([日本語](docs/PLAN.ja.md), [한국어](docs/PLAN.ko.md)).
+
+## Opening untrusted files
+
+A `.xdw` carries its own sizes: how large compressed data becomes, how many pixels a picture has,
+how many points a line has. A crafted file can claim far more than it holds (a few hundred bytes
+that say "4 GB once expanded"), so the engine checks every count against the data that is really
+there and stops at these limits. The defaults are far above what real documents need (the largest
+values in the public samples stay under 30% of every limit).
+
+| Limit | Default | What it counts |
+|---|---|---|
+| `maxBytes` | 768 MB | working memory for opening the document, or for drawing one page (expanded data and pictures) |
+| `maxExpand` | 256 MB | one compressed block, expanded |
+| `maxRatio` | 1000 × | one compressed block: expanded size over stored size |
+| `maxPages` | 20,000 | pages in the document |
+| `maxImagePixels` | 100 million | pixels in one picture |
+| `maxRecords` | 1 million | drawing records on one page |
+| `maxPoints` | 5 million | line points and characters on one page |
+
+Past a limit the call fails with "too large or damaged: …". When you embed the engine in another
+service, lower the limits and run it in a Web Worker. `web/worker/ezpzxdw-safe.js` does that for you
+and terminates the worker on a timeout. The browser engine uses at most 1 GiB of memory.
+
+```js
+import { readXdwSafely } from "./worker/ezpzxdw-safe.js";
+const { result, hiddenChars } = await readXdwSafely(bytes, { want: "text", limits: { maxPages: 300 }, timeoutMs: 15000 });
+// or directly: XdwDoc.openWith(bytes, '{"maxPages":300}')
+```
+
+In Rust: `Document::open_with(bytes, &Limits { max_pages: 300, ..Default::default() })`.
+
+Covered text: a character is left out when the inner part of its box (inside its advance, from the
+baseline up to 0.7 em) lies completely inside an opaque fill (white too) or an opaque picture drawn
+after it, within that one's clip. A highlighter (multiplying), a partly transparent picture and a line
+are not covers. A picture in the same drawing as the text is not a cover either: scanned pages with
+recognised text and pages taken from a PDF keep their text under the picture. To keep covered text:
+`XdwDoc.setIncludeHidden(true)`, in Rust `doc.include_hidden = true`, on the command line
+`ezpzxdw text file.xdw --include-hidden`. A file saved as `.xdw` still holds the covered text, as in
+DocuWorks; to hand over a redacted document, save it as PDF.
 
 ## Editor
 
@@ -98,6 +145,7 @@ engine/crates/ezpzxdw-core   reader, renderer (EMF/WMF/DW → display list), edi
 engine/crates/ezpzxdw-cli    `ezpzxdw` command: info, tree, pages, render, text, edit, check …
 engine/crates/ezpzxdw-wasm   browser bindings
 web/                       the editor (build: web/build.sh → web/dist/ezpzxdw-editor.html)
+web/worker/                read untrusted files in a Web Worker (ezpzxdw-safe.js)
 docs/spec/XDW-FORMAT.md    the format
 docs/PLAN.{ja,en,ko}.md    plan and progress (日本語, English, 한국어)
 tools/dwview               DocuWorks Viewer Light as a referee (Wine)

@@ -13,8 +13,12 @@ against the real viewer**.
   answers.
 - The real DocuWorks Viewer Light is the referee. A [viewer] mark in the spec means we made a file
   and opened it there.
-- Saving works the way DocuWorks does it: the original stays untouched and **one bundle (segment)
-  is appended at the end**. Parts we do not understand are left alone.
+- Saving **writes the whole file anew with only what the document uses now** (since 2026-10-07):
+  deleted pages and annotations do not stay in the file. Only a signed document is saved the way
+  DocuWorks saves it, one bundle (segment) appended at the end, which keeps the signed state. Either
+  way, parts we do not understand are copied byte for byte.
+- Sizes and counts written in a file are not trusted: they are checked against the data that is
+  really there, and reading stops at the limits (v0.3).
 - A saved file is read back and compared. If anything differs, nothing is saved.
 - No effect on ezpzfile.com (separate repository).
 
@@ -51,7 +55,7 @@ against the real viewer**.
 | DocuWorks 10 scan and photo pages (drawing kind 5) | Done (new finding) |
 | Signed documents | On opening, a notice says editing will invalidate the signature; the signature itself cannot be moved or deleted |
 
-## v0.3 (2026-10-02): selecting and searching text, see-through pictures
+## v0.3 (2026-10-02 to 2026-11-04): selecting and searching text, see-through pictures, saving anew, untrusted files
 
 | Item | Status |
 |---|---|
@@ -62,6 +66,11 @@ against the real viewer**.
 | Resizing pictures | Done (drag a corner) |
 | Recognizing protected documents | Done. A document protected by a password or a certificate is reported as protected rather than damaged, with a note to remove the protection in DocuWorks first. This editor never handles passwords |
 | Show signature information | Done. Selecting a signature shows its type (electronic seal or certificate), the signing module (`%smin`) and version (`%sigver`). Whether it still holds needs the DocuWorks API or verifying the certificate (not yet) |
+| Saving the whole file anew (10/07) | Done. Only the entries in use are written, numbered anew, in a one-segment file; deleted pages and annotations do not stay. A signed document is appended to instead. 39 public samples rewritten and edited open in Viewer Light |
+| New documents (10/07) | Done. One blank A4 page, written the way DocuWorks 10 writes a new document. Dropping PDFs or pictures with nothing open makes a new document of them |
+| Text of pages taken from a PDF (10/28) | Done. In the engine (core), `Document::insert_image_page_text` draws the text first in the page drawing and the page picture over it: the page looks the same, and the text is there for search, selection, copying and the PDF text layer (in DocuWorks too). Taking the text and its places out of the PDF is the web editor's part (pdf.js), passed in through wasm `insertImagePageText` |
+| Limits for untrusted files (11/04) | Done. Expanded sizes from the file are no longer reserved up front: they are checked against `maxExpand` and `maxRatio` and memory grows with what is really decoded. Limits too for pixels per picture, drawing records and points per page, pages, and working memory (`Limits`, `Document::open_with`). Counts inside a record are cut to what the record holds. Past a limit: `TooLarge` ("too large or damaged"). The browser engine uses at most 1 GiB, and the editor checks a file in a Web Worker before opening it (`web/worker/ezpzxdw-safe.js`) |
+| Leaving out covered text (11/04) | Done. Text completely covered by an opaque fill or picture drawn after it is left out of the text, the PDF text layer and the editor's text selection (by default). Highlighters, partly transparent pictures and pictures in the same drawing (scans, pages taken from a PDF) are not covers. `include_hidden` / `setIncludeHidden(true)` / `--include-hidden` keep it; `hidden_chars` says how much was left out |
 
 ## Next
 
