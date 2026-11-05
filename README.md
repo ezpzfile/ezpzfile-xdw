@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/ezpz_xdw.svg" alt="EZPZ File XDW" width="96">
+  <img src="docs/images/icon.png" alt="EZPZ File XDW" width="128">
 </p>
 <h1 align="center">EZPZ File XDW</h1>
 <p align="center"><b>日本語</b> · <a href="README.en.md">English</a> · <a href="README.ko.md">한국어</a></p>
