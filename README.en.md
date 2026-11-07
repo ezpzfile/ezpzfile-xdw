@@ -19,6 +19,19 @@ Not affiliated with FUJIFILM Business Innovation.
 
 <sub>A sample quotation with a date stamp, highlighter, sticky note and a see-through approval seal. It looks the same in DocuWorks.</sub>
 
+## Use it in your browser (no install)
+
+We run free tools built directly on this engine. Your files never leave your device.
+
+- [XDW editor](https://ezpzfile.com/xdw-editor): open a .xdw or .xbd, add sticky notes and date stamps, and save it as it was. Converts to PDF too
+- [How to open a .xdw file without DocuWorks](https://ezpzfile.com/column/open-xdw-file)
+
+### Sites using this engine
+
+- [openedfile.com](https://openedfile.com/ja/tools/xdw): a tool to open .xdw files in the browser and convert them to PDF
+
+Using it somewhere? Let us know and we will add you here.
+
 ## What works
 
 Tested on 43 public DocuWorks files (generation 7 and 10, `.xdw` and `.xbd`):

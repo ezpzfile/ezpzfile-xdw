@@ -19,6 +19,19 @@
 
 <sub>견본 견적서에 날짜 도장·형광펜·付箋·비치는 승인 도장을 단 모습. DocuWorks에서 열어도 똑같이 보입니다.</sub>
 
+## 브라우저에서 바로 쓰기 (설치 없음)
+
+이 엔진을 그대로 넣은 무료 도구를 운영합니다. 파일은 기기 밖으로 나가지 않습니다. 화면은 일본어와 영어만 있습니다.
+
+- [XDW 편집기](https://ezpzfile.com/xdw-editor): .xdw / .xbd 를 열어 부전지·날짜 도장을 붙이고 그대로 저장. PDF 로도 변환
+- [DocuWorks 없이 xdw 파일 여는 법 (영어)](https://ezpzfile.com/column/open-xdw-file)
+
+### 이 엔진을 쓰는 곳
+
+- [openedfile.com](https://openedfile.com/ja/tools/xdw): xdw 를 브라우저에서 열고 PDF 로 바꾸는 도구
+
+쓰고 계신 곳이 있으면 알려 주세요. 여기에 더하겠습니다.
+
 ## 되는 것
 
 인터넷에 공개된 DocuWorks 파일 43개(세대 7·10, `.xdw`와 `.xbd`)로 확인했습니다.

@@ -19,6 +19,21 @@
 
 <sub>見本の見積書に、日付印・蛍光ペン・付箋・透ける承認印を付けたところ。DocuWorks で開いても同じに見えます。</sub>
 
+## ブラウザでそのまま使う（インストール不要）
+
+このエンジンをそのまま組み込んだ無料ツールを公開しています。ファイルは端末の外に送信されません。
+
+- [XDW エディタ](https://ezpzfile.com/ja/xdw-editor)：.xdw / .xbd を開いて付箋・日付印を付け、そのまま保存。PDF にも変換
+- [xdw ファイルの開き方（DocuWorks なし）](https://ezpzfile.com/ja/column/open-xdw-file)
+- [xdw を PDF に変換する](https://ezpzfile.com/ja/column/xdw-to-pdf)
+- [DocuWorks Viewer Light が入らないとき](https://ezpzfile.com/ja/column/docuworks-viewer-light)
+
+### このエンジンを使っているサイト
+
+- [openedfile.com](https://openedfile.com/ja/tools/xdw)：xdw をブラウザで開く・PDF に変換するツール
+
+採用例があればお知らせください。ここに追記します。
+
 ## できること
 
 インターネットで公開されている DocuWorks ファイル 43 件（第 7・第 10 世代、`.xdw` と `.xbd`）で確認しています。
