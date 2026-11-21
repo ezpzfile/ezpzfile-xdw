@@ -138,6 +138,8 @@ details.sec > summary .chev { color: var(--ink-300); transition: transform .15s;
 details.sec[open] > summary .chev { transform: rotate(90deg); }
 .secbody { padding: 0 14px 14px; display: grid; gap: 10px; }
 .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.row.orig { flex-wrap: nowrap; }
+.row.orig .oname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .row > label { color: var(--ink-500); font-size: 12px; min-width: 40px; }
 .lab { color: var(--ink-500); font-size: 12px; }
 .pbtn { border: 0; background: var(--ink-50); color: var(--ink-900); border-radius: var(--r-md); padding: 6px 10px; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; }

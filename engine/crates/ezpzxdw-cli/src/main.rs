@@ -28,6 +28,9 @@ USAGE:
   ezpzxdw resave <in> <out>        save again without changes (appends a segment)
   ezpzxdw rewrite <in> <out>       write the whole file anew: only the entries in use
   ezpzxdw new    <out> [w h]       a new document with one blank page (1/100 mm; A4 portrait)
+  ezpzxdw binder <out> <doc>...    a new binder (.xbd) holding these documents
+  ezpzxdw attach <in> <file> <out> attach a file as original data (原本)
+  ezpzxdw originals <file> [k out] list the original data, or write number k to out
   ezpzxdw set-content <in> <entry> <data> <out>
                                  replace what entry <entry> holds (expanded data)
   ezpzxdw lzh-c  <in> <out>        compress (LHA -lh5-)
@@ -72,6 +75,41 @@ fn show_value(v: &[u8]) -> String {
 }
 
 fn run(a: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    if a[1] == "binder" {
+        // binder <out> <doc>...: a new binder holding these documents
+        let out = &a[2];
+        let stem = |p: &str| std::path::Path::new(p).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+        let mut b = ezpzxdw_core::doc::Document::blank_binder(&stem(out))?;
+        for (k, p) in a[3..].iter().enumerate() {
+            let d = ezpzxdw_core::doc::Document::open(std::fs::read(p)?)?;
+            b.add_binder_docs(k, &d, &stem(p))?;
+        }
+        std::fs::write(out, b.save()?)?;
+        return Ok(());
+    }
+    if a[1] == "attach" {
+        // attach <in> <file> <out>: attach a file as original data
+        let mut d = ezpzxdw_core::doc::Document::open(std::fs::read(&a[2])?)?;
+        let f = a.get(3).ok_or("missing file")?;
+        let name = std::path::Path::new(f).file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+        let t = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0);
+        d.add_original(&name, &std::fs::read(f)?, t)?;
+        std::fs::write(a.get(4).ok_or("missing out")?, d.save()?)?;
+        return Ok(());
+    }
+    if a[1] == "originals" {
+        // originals <file> [k out]: list the original data, or write one out
+        let d = ezpzxdw_core::doc::Document::open(std::fs::read(&a[2])?)?;
+        match (a.get(3), a.get(4)) {
+            (Some(k), Some(o)) => std::fs::write(o, d.original_data(k.parse()?)?)?,
+            _ => {
+                for (k, o) in d.originals().iter().enumerate() {
+                    println!("{k}: {} ({} bytes, time {:?})", o.name, o.size, o.time);
+                }
+            }
+        }
+        return Ok(());
+    }
     if a[1] == "new" {
         let size = |k: usize, v: f64| a.get(k).map(|s| s.parse::<f64>()).transpose().map(|x| x.unwrap_or(v));
         let d = ezpzxdw_core::doc::Document::blank(size(3, 21000.0)?, size(4, 29700.0)?)?;

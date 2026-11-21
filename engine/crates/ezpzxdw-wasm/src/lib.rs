@@ -442,6 +442,52 @@ impl XdwDoc {
         Ok(r)
     }
 
+    /// A new binder with no documents yet (add some with `addBinderDocs`
+    /// before showing it).
+    #[wasm_bindgen(js_name = blankBinder)]
+    pub fn blank_binder(name: &str) -> Result<XdwDoc, JsError> {
+        Ok(XdwDoc::of(Document::blank_binder(name).map_err(err)?))
+    }
+
+    /// A new binder named `binder_name` holding this document (as it is
+    /// now, named `doc_name`) as its first.
+    #[wasm_bindgen(js_name = intoBinder)]
+    pub fn into_binder(&self, binder_name: &str, doc_name: &str) -> Result<XdwDoc, JsError> {
+        let b = self.doc.into_binder(binder_name, doc_name).map_err(err)?;
+        // the new binder counts as changed until it is saved
+        let mut x = XdwDoc::of(b);
+        x.saved_state.clear();
+        Ok(x)
+    }
+
+    /// Original data (原本) the document carries: JSON [{name, size, time}].
+    pub fn originals(&self) -> String {
+        serde_json::to_string(&self.doc.originals()).unwrap_or_else(|_| "[]".into())
+    }
+
+    /// The bytes of original data `k`.
+    #[wasm_bindgen(js_name = originalData)]
+    pub fn original_data(&self, k: usize) -> Result<Vec<u8>, JsError> {
+        self.doc.original_data(k).map_err(err)
+    }
+
+    /// Attach a file as original data (`time`: Unix time, seconds).
+    #[wasm_bindgen(js_name = addOriginal)]
+    pub fn add_original(&mut self, name: &str, data: &[u8], time: f64) -> Result<usize, JsError> {
+        self.before();
+        let r = self.doc.add_original(name, data, time as i64).map_err(|e| self.fail(e))?;
+        self.after();
+        Ok(r)
+    }
+
+    #[wasm_bindgen(js_name = deleteOriginal)]
+    pub fn delete_original(&mut self, k: usize) -> Result<(), JsError> {
+        self.before();
+        self.doc.delete_original(k).map_err(|e| self.fail(e))?;
+        self.after();
+        Ok(())
+    }
+
     /// Does the document carry a signature (editing makes it invalid)?
     #[wasm_bindgen(js_name = isSigned)]
     pub fn is_signed(&self) -> bool {

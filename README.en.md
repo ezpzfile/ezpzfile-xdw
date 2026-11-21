@@ -47,7 +47,7 @@ Tested on 43 public DocuWorks files (generation 7 and 10, `.xdw` and `.xbd`):
   a new document. Drop PDFs or pictures with nothing open and their pages make a
   new document
 - annotations: add **text, sticky note (付箋), date stamp (日付印), highlighter,
-  rectangle, ellipse, line, picture**; move, resize, change, delete (existing
+  rectangle, ellipse, line, arrow, marker, polygon, picture**; move, resize, change, delete (existing
   annotations from DocuWorks too: move / delete). A picture can be
   **see-through**: its white parts show the text underneath, in DocuWorks too
 - **select and copy text** in pages, **search** the document (Ctrl+F)
@@ -56,7 +56,10 @@ Tested on 43 public DocuWorks files (generation 7 and 10, `.xdw` and `.xbd`):
   `.xbd`, or PDF pages (as pictures, with the PDF's text kept under the picture so it can be
   searched and copied; needs the network once for pdf.js)
 - **binders (`.xbd`)**: documents shown in the page list; add `.xdw` files,
-  rename, reorder, remove documents
+  rename, reorder, remove documents; make a new binder (adding a document to a
+  `.xdw` turns it into a binder with that document first)
+- **original files**: take out, attach or remove the files a document carries
+  (DocuWorks "original data", 原本添付: the Word or Excel file it came from)
 - export: **PDF** (looks like the screen, text searchable/copyable), plain text; print
 - **covered text stays covered**: text blacked out with a rectangle annotation or an opaque
   picture is left out of the extracted text and of the PDF text layer, so what looks redacted
@@ -127,7 +130,8 @@ DocuWorks; to hand over a redacted document, save it as PDF.
 drop a `.xdw` on the window, annotate, and save (Ctrl+S → `.xdw`). The screen
 follows DocuWorks Viewer (page list on the left, annotation tools on top,
 properties on the right) in the EZPZ File design. Keys: T text, S sticky note,
-D date stamp, H highlighter, R rectangle, E ellipse, L line, Esc select,
+D date stamp, H highlighter, R rectangle, E ellipse, L line, A arrow, M marker,
+P polygon (click the corners, Enter or double-click to finish), Esc select,
 Delete, arrows (Shift = 1 cm), Ctrl+Z / Ctrl+Y, Ctrl+S, Ctrl+Shift+S (save as
 PDF / text), Ctrl+P, Ctrl+F (search). Drop a PDF or a picture on an open document to insert it
 as pages; with nothing open, it becomes a new document.

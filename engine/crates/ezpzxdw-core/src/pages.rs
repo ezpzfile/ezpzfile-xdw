@@ -124,6 +124,22 @@ pub fn decode_name(v: &[u8]) -> String {
         return utf16(v);
     }
     let end = v.iter().position(|&b| b == 0).unwrap_or(v.len());
+    // DocuWorks 10 writes a binder's own name as UTF-16 and one zero byte
+    // (an odd length). Read that way when the UTF-16 is plausible Japanese
+    // and the Shift_JIS reading stops early or mixes ASCII into kanji
+    // (what UTF-16 bytes look like as Shift_JIS)
+    if v.len() >= 3 && v.len() % 2 == 1 && v[v.len() - 1] == 0 {
+        let u: Vec<u16> = v[..v.len() - 1].chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
+        let plausible = u.iter().all(|&c| matches!(c, 0x20..=0x7e | 0x3000..=0x30ff | 0x4e00..=0x9fff | 0xff01..=0xffef));
+        if plausible {
+            let (sj, _, _) = encoding_rs::SHIFT_JIS.decode(&v[..end]);
+            let cs: Vec<char> = sj.chars().collect();
+            let mixed = cs.windows(2).any(|w| w[0].is_ascii_alphanumeric() != w[1].is_ascii_alphanumeric() && (!w[0].is_ascii() || !w[1].is_ascii()));
+            if end < v.len() - 1 || mixed {
+                return String::from_utf16_lossy(&u);
+            }
+        }
+    }
     let (text, _, bad) = encoding_rs::SHIFT_JIS.decode(&v[..end]);
     // half-width katakana in a name almost always means UTF-16 bytes read as
     // Shift_JIS (kana and kanji have 0x30… high bytes)
@@ -487,6 +503,13 @@ mod tests {
         assert_eq!(decode_name(b"test_xdw_ver10-1\0"), "test_xdw_ver10-1");
         assert_eq!(decode_name(&sjisz("資料A（表紙）")), "資料A（表紙）");
         assert_eq!(decode_name(&utf16z("Ab")), "Ab");
+        // UTF-16 and one zero byte, kanji that also read as Shift_JIS
+        let mut v: Vec<u8> = "見積一式".encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
+        v.push(0);
+        assert_eq!(decode_name(&v), "見積一式");
+        let mut v: Vec<u8> = "請求書".encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
+        v.push(0);
+        assert_eq!(decode_name(&v), "請求書");
     }
 
     #[test]

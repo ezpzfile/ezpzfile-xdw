@@ -57,6 +57,42 @@ pub enum Shape {
         color: u32,
         #[serde(default = "one")]
         width: f64,
+        /// Arrowheads: 0 none, 1 at the start, 2 at the end, 3 both
+        /// (DocuWorks' %ArrowheadType, stored as LINE_STYLE).
+        #[serde(default)]
+        arrow: u8,
+        /// 0 wide open, 1 narrow open, 2 narrow filled (%ArrowheadStyle,
+        /// stored as ARROW_SORT).
+        #[serde(default = "two_u8")]
+        arrow_style: u8,
+    },
+    /// A marker (マーカー): a freehand pen stroke. Points relative to the box.
+    Marker {
+        points: Vec<(f64, f64)>,
+        color: u32,
+        /// Points.
+        #[serde(default = "one")]
+        width: f64,
+        /// The colour multiplies the page, like a highlighter pen.
+        #[serde(default)]
+        translucent: bool,
+    },
+    /// A polygon (多角形), or with `closed` false a polyline that may end in
+    /// arrowheads. Points relative to the box.
+    Polygon {
+        points: Vec<(f64, f64)>,
+        #[serde(default)]
+        stroke: Option<u32>,
+        #[serde(default = "one")]
+        width: f64,
+        #[serde(default)]
+        fill: Option<u32>,
+        #[serde(default = "yes")]
+        closed: bool,
+        #[serde(default)]
+        arrow: u8,
+        #[serde(default = "two_u8")]
+        arrow_style: u8,
     },
     /// A date stamp (日付印): a circle split in three by two lines, with
     /// `top` above, `date` in the middle and `bottom` below.
@@ -117,6 +153,70 @@ pub fn sticky_box(text: &str, size: f64) -> (f64, f64) {
 
 fn one() -> f64 {
     1.0
+}
+
+fn two_u8() -> u8 {
+    2
+}
+
+fn yes() -> bool {
+    true
+}
+
+/// An arrowhead as DocuWorks stores it (ARROW_START_DATA / ARROW_END_DATA):
+/// one side, the tip, the other side. `from` is the point the line comes
+/// from; wide heads are 10 mm at 45°, narrow ones grow with the line at 15°.
+pub fn arrow_head(from: (f64, f64), tip: (f64, f64), style: u8, width: f64) -> [(f64, f64); 3] {
+    let (dx, dy) = (from.0 - tip.0, from.1 - tip.1);
+    let len = (dx * dx + dy * dy).sqrt().max(1.0);
+    let back = dy.atan2(dx);
+    let (arm, spread) = if style == 0 || style == 3 {
+        (1000.0, 45f64.to_radians())
+    } else {
+        ((190.0 * width.max(0.5)).min(len / 7.0).max(120.0), 15f64.to_radians())
+    };
+    let side = |a: f64| (tip.0 + arm * a.cos(), tip.1 + arm * a.sin());
+    [side(back + spread), tip, side(back - spread)]
+}
+
+/// The arrowheads of a line or polyline: (at the start, at the end).
+pub fn arrow_heads(points: &[(f64, f64)], arrow: u8, style: u8, width: f64) -> (Option<[(f64, f64); 3]>, Option<[(f64, f64); 3]>) {
+    if points.len() < 2 {
+        return (None, None);
+    }
+    let n = points.len();
+    let start = (arrow & 1 != 0).then(|| arrow_head(points[1], points[0], style, width));
+    let end = (arrow & 2 != 0).then(|| arrow_head(points[n - 2], points[n - 1], style, width));
+    (start, end)
+}
+
+fn points_bytes(points: &[(f64, f64)]) -> Vec<u8> {
+    let mut d = Vec::new();
+    for &(x, y) in points {
+        d.extend_from_slice(&(x.round() as i32).to_le_bytes());
+        d.extend_from_slice(&(y.round() as i32).to_le_bytes());
+    }
+    d
+}
+
+fn points_of(data: &[u8]) -> Vec<(f64, f64)> {
+    data.chunks_exact(8)
+        .map(|c| (i32::from_le_bytes([c[0], c[1], c[2], c[3]]) as f64, i32::from_le_bytes([c[4], c[5], c[6], c[7]]) as f64))
+        .collect()
+}
+
+/// Draw arrowheads (open: two strokes; filled: a triangle in the line colour).
+fn draw_heads(e: &mut Emf, heads: [Option<[(f64, f64); 3]>; 2], style: u8, color: u32, wu: i32) {
+    for h in heads.into_iter().flatten() {
+        let pts: Vec<(i32, i32)> = h.iter().map(|&(x, y)| (emfw::units(x), emfw::units(y))).collect();
+        if style == 2 {
+            e.pen_brush(Some((color, wu)), Some(color));
+            e.polygon(&pts);
+            e.pen_brush(Some((color, wu)), None);
+        } else {
+            e.polyline(&pts);
+        }
+    }
 }
 
 fn stamp_red() -> u32 {
@@ -204,11 +304,39 @@ pub fn draw(shape: &Shape, w: f64, h: f64) -> Vec<u8> {
             let i = if stroke.is_some() { wu / 2 } else { 0 };
             e.ellipse(i, i, uw - i, uh - i);
         }
-        Shape::Line { points, color, width } => {
+        Shape::Line { points, color, width, arrow, arrow_style } => {
             let wu = emfw::units(width * 100.0 / 2.835).max(1);
             e.pen_brush(Some((*color, wu)), None);
             let pts: Vec<(i32, i32)> = points.iter().map(|&(x, y)| (emfw::units(x), emfw::units(y))).collect();
             e.polyline(&pts);
+            let (a, b) = arrow_heads(points, *arrow, *arrow_style, *width);
+            draw_heads(&mut e, [a, b], *arrow_style, *color, wu);
+        }
+        Shape::Marker { points, color, width, translucent } => {
+            let wu = emfw::units(width * 100.0 / 2.835).max(1);
+            if *translucent {
+                e.mask_mode(true);
+            }
+            e.pen_brush(Some((*color, wu)), None);
+            let pts: Vec<(i32, i32)> = points.iter().map(|&(x, y)| (emfw::units(x), emfw::units(y))).collect();
+            e.polyline(&pts);
+            if *translucent {
+                e.mask_mode(false);
+            }
+        }
+        Shape::Polygon { points, stroke, width, fill, closed, arrow, arrow_style } => {
+            let wu = emfw::units(width * 100.0 / 2.835).max(1);
+            let pts: Vec<(i32, i32)> = points.iter().map(|&(x, y)| (emfw::units(x), emfw::units(y))).collect();
+            if *closed {
+                e.pen_brush(stroke.map(|c| (c, wu)), *fill);
+                e.polygon(&pts);
+            } else {
+                let c = stroke.unwrap_or(0);
+                e.pen_brush(Some((c, wu)), None);
+                e.polyline(&pts);
+                let (a, b) = arrow_heads(points, *arrow, *arrow_style, *width);
+                draw_heads(&mut e, [a, b], *arrow_style, c, wu);
+            }
         }
         Shape::Stamp { top, date, bottom, color } => draw_stamp(&mut e, uw, uh, top, date, bottom, *color),
     }
@@ -474,27 +602,96 @@ fn object_record(depth: u8, id: i64, shape: &Shape, w: f64, h: f64) -> Record {
             attrs.push(int_attr(2007, &[0]));
             attrs.push(int_attr(2008, &[0]));
         }
-        Shape::Line { points, color, width } => {
+        Shape::Line { points, color, width, arrow, arrow_style } => {
+            // what DocuWorks 10 writes when its API gives a line arrowheads:
+            // LINE_STYLE is the arrowhead type, ARROW_SORT the style, and
+            // each head's three points are kept as well
             kind = K_LINE;
-            attrs.push(defs_attr(&[
+            let (start, end) = arrow_heads(points, *arrow, *arrow_style, *width);
+            let mut defs = vec![
                 (2003, 2, "LINE_COLOR"),
                 (2004, 2, "ATTR_TRANSPARENT"),
                 (2005, 2, "LINE_WIDTH"),
                 (2006, 2, "LINE_STYLE"),
                 (2007, 2, "ARROW_SORT"),
                 (2010, 4, "LINE_DATA"),
-            ]));
+            ];
+            if start.is_some() {
+                defs.push((2011, 4, "ARROW_START_DATA"));
+            }
+            if end.is_some() {
+                defs.push((2012, 4, "ARROW_END_DATA"));
+            }
+            attrs.push(defs_attr(&defs));
             attrs.push(int_attr(2003, &[emfw::colorref(*color) as i64]));
             attrs.push(int_attr(2004, &[0]));
             attrs.push(int_attr(2005, &[width.round().max(1.0) as i64]));
-            attrs.push(int_attr(2006, &[0]));
-            attrs.push(int_attr(2007, &[0]));
-            let mut d = Vec::new();
-            for &(x, y) in points {
-                d.extend_from_slice(&(x.round() as i32).to_le_bytes());
-                d.extend_from_slice(&(y.round() as i32).to_le_bytes());
+            attrs.push(int_attr(2006, &[(*arrow & 3) as i64]));
+            attrs.push(int_attr(2007, &[if *arrow & 3 != 0 { (*arrow_style).min(3) as i64 } else { 0 }]));
+            attrs.push(named(2010, points_bytes(points)));
+            if let Some(h) = start {
+                attrs.push(named(2011, points_bytes(&h)));
             }
-            attrs.push(named(2010, d));
+            if let Some(h) = end {
+                attrs.push(named(2012, points_bytes(&h)));
+            }
+        }
+        Shape::Marker { points, color, width, translucent } => {
+            // DocuWorks 10's own marker (made with its API and read back)
+            kind = doc::K_MARKER;
+            attrs.push(defs_attr(&[
+                (2001, 4, "STROKE_DATA"),
+                (2002, 2, "STROKE_COLOR"),
+                (2003, 2, "STROKE_THICKNESS"),
+                (2004, 2, "STROKE_PAERMEABLE"),
+            ]));
+            attrs.push(named(2001, points_bytes(points)));
+            attrs.push(int_attr(2002, &[emfw::colorref(*color) as i64]));
+            attrs.push(int_attr(2003, &[width.round().max(1.0) as i64]));
+            attrs.push(int_attr(2004, &[if *translucent { 1 } else { 0 }]));
+        }
+        Shape::Polygon { points, stroke, width, fill, closed, arrow, arrow_style } => {
+            // DocuWorks 10's own polygon; an open one is a polyline and may
+            // carry arrowheads like a line
+            kind = doc::K_POLYGON;
+            let (start, end) = if *closed { (None, None) } else { arrow_heads(points, *arrow, *arrow_style, *width) };
+            let mut defs = vec![
+                (2001, 4, "%POLYGON_DATA"),
+                (2002, 2, "%ATTR_FRAMETRANSPARENT"),
+                (2003, 2, "%POLYGON_FRAME"),
+                (2004, 2, "%POLYGON_FRAMECOLOR"),
+                (2005, 2, "%POLYGON_THICK"),
+                (2006, 2, "%POLYGON_FILL"),
+                (2007, 2, "%POLYGON_FILLCOLOR"),
+                (2008, 2, "%ATTR_FILLTRANSPARENT"),
+                (2009, 2, "%POLYGON_CLOSE"),
+                (2010, 2, "ARROW_TYPE"),
+                (2011, 2, "ARROW_STYLE"),
+            ];
+            if start.is_some() {
+                defs.push((2012, 4, "ARROW_START_DATA"));
+            }
+            if end.is_some() {
+                defs.push((2013, 4, "ARROW_END_DATA"));
+            }
+            attrs.push(defs_attr(&defs));
+            attrs.push(named(2001, points_bytes(points)));
+            attrs.push(int_attr(2002, &[0]));
+            attrs.push(int_attr(2003, &[if stroke.is_some() { 1 } else { 0 }]));
+            attrs.push(int_attr(2004, &[emfw::colorref(stroke.unwrap_or(0)) as i64]));
+            attrs.push(int_attr(2005, &[width.round().max(1.0) as i64]));
+            attrs.push(int_attr(2006, &[if fill.is_some() && *closed { 1 } else { 0 }]));
+            attrs.push(int_attr(2007, &[emfw::colorref(fill.unwrap_or(0xffffff)) as i64]));
+            attrs.push(int_attr(2008, &[0]));
+            attrs.push(int_attr(2009, &[if *closed { 1 } else { 0 }]));
+            attrs.push(int_attr(2010, &[if *closed { 0 } else { (*arrow & 3) as i64 }]));
+            attrs.push(int_attr(2011, &[if !*closed && *arrow & 3 != 0 { (*arrow_style).min(3) as i64 } else { 0 }]));
+            if let Some(h) = start {
+                attrs.push(named(2012, points_bytes(&h)));
+            }
+            if let Some(h) = end {
+                attrs.push(named(2013, points_bytes(&h)));
+            }
         }
         Shape::Stamp { top, date, bottom, color } => {
             // what DocuWorks 10 itself writes for a date stamp (made with
@@ -1025,15 +1222,36 @@ impl Document {
                 }
             }
             K_LINE => {
-                let data = self.named(o.record, "LINE_DATA")?.value.clone();
-                let points = data
-                    .chunks_exact(8)
-                    .map(|c| (i32::from_le_bytes([c[0], c[1], c[2], c[3]]) as f64, i32::from_le_bytes([c[4], c[5], c[6], c[7]]) as f64))
-                    .collect();
+                let points = points_of(&self.named(o.record, "LINE_DATA")?.value);
                 let color = rgb(ni("LINE_COLOR").unwrap_or(0));
                 let width = ni("LINE_WIDTH").unwrap_or(1) as f64;
+                let arrow = (ni("LINE_STYLE").unwrap_or(0) & 3) as u8;
+                let arrow_style = if arrow != 0 { ni("ARROW_SORT").unwrap_or(2).clamp(0, 3) as u8 } else { 2 };
                 let _ = r;
-                Some(Shape::Line { points, color, width })
+                Some(Shape::Line { points, color, width, arrow, arrow_style })
+            }
+            doc::K_MARKER => {
+                let points = points_of(&self.named(o.record, "STROKE_DATA")?.value);
+                Some(Shape::Marker {
+                    points,
+                    color: rgb(ni("STROKE_COLOR").unwrap_or(0)),
+                    width: ni("STROKE_THICKNESS").unwrap_or(1) as f64,
+                    translucent: ni("STROKE_PAERMEABLE").unwrap_or(0) != 0,
+                })
+            }
+            doc::K_POLYGON => {
+                let points = points_of(&self.named(o.record, "%POLYGON_DATA")?.value);
+                let closed = ni("%POLYGON_CLOSE").unwrap_or(1) != 0;
+                let arrow = if closed { 0 } else { (ni("ARROW_TYPE").unwrap_or(0) & 3) as u8 };
+                Some(Shape::Polygon {
+                    points,
+                    stroke: (ni("%POLYGON_FRAME").unwrap_or(1) != 0).then(|| rgb(ni("%POLYGON_FRAMECOLOR").unwrap_or(0))),
+                    width: ni("%POLYGON_THICK").unwrap_or(1) as f64,
+                    fill: (closed && ni("%POLYGON_FILL").unwrap_or(0) != 0).then(|| rgb(ni("%POLYGON_FILLCOLOR").unwrap_or(0xffffff))),
+                    closed,
+                    arrow,
+                    arrow_style: if arrow != 0 { ni("ARROW_STYLE").unwrap_or(2).clamp(0, 3) as u8 } else { 2 },
+                })
             }
             doc::K_STAMP => {
                 let text = |name: &str| -> String {

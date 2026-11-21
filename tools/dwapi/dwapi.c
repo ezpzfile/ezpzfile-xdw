@@ -6,6 +6,14 @@
  *   dwapi move FILE PAGE N X Y [W H]   move (and size) annotation N, save
  *   dwapi protect IN OUT TYPE OPENPW [FULLPW PERM]   password-protect a copy (TYPE: 1, 3 = 128-bit, 7 = 256-bit)
  *   dwapi protinfo FILE           protection type and permissions
+ *   dwapi addann FILE TYPE X Y [PX PY ...] [i:NAME=N] [s:NAME=TEXT]   add an annotation of any type
+ *         (lines, markers and polygons take their points; attributes are set after adding), save
+ *   dwapi setattr FILE PAGE N [i:NAME=N] [s:NAME=TEXT]   change annotation N's settings, save
+ *   dwapi binder OUT [DOC ...]    a new binder, with these documents in it
+ *   dwapi orig FILE INPUT         attach INPUT to the document as original data (原本), save
+ *   dwapi originfo FILE           the original data a document carries
+ *   dwapi getorig FILE N OUT      write original data N to OUT
+ *   dwapi text FILE PAGE OUT      the text DocuWorks finds on a page, to OUT
  * Strings are Shift_JIS (code page 932). */
 #include <windows.h>
 #include <stdio.h>
@@ -27,6 +35,10 @@ typedef struct { int nSize, nDpi, nColor; } IMAGE_OPTION;
 typedef struct { int nSize, nPermission; char szOpenPswd[256], szFullAccessPswd[256]; char *lpszComment; } SEC_PSWD;
 typedef struct { int nSize, nAuthMode; } PROTECT_OPTION;
 typedef struct { int nSize, nProtectType, nPermission; } PROTECTION_INFO;
+typedef struct { int x, y; } XPOINT;
+typedef struct { AA_INIT common; int nCounts; XPOINT *pPoints; } AA_POINTS;
+typedef struct { int nSize, nBinderColor, nBinderSize; } BINDER_INIT;
+typedef struct { int nSize, nDataSize; long nDate; char szName[256]; } ORGDATA_INFO;
 
 typedef int (__stdcall *pOpen)(const char *, HDOC *, OPEN_MODE_EX *);
 typedef int (__stdcall *pClose)(HDOC, void *);
@@ -54,6 +66,7 @@ static const char *NAMES[] = {
     /* shapes, sticky */ "%FillColor", "%BorderWidth", "%Transparent", "%AutoResize",
     /* stamp */ "%TopField", "%BottomField", "%DateStyle", "%YearField", "%MonthField", "%DayField", "%BasisYear",
     "%BasisYearStyle", "%DateFormat", "%DateOrder", "%DateFieldFirstChar",
+    /* lines, polygons */ "%ArrowheadType", "%ArrowheadStyle",
     NULL };
 
 static void attrs(pGetAttr get, HANN a, const char *pad) {
@@ -108,7 +121,26 @@ int main(int argc, char **argv) {
     }
     pOpen open = fn("XDW_OpenDocumentHandle");
     pClose close = fn("XDW_CloseDocumentHandle");
-    int edit = strcmp(argv[1], "make") == 0 || strcmp(argv[1], "stampvar") == 0 || strcmp(argv[1], "addimg") == 0 || strcmp(argv[1], "move") == 0;
+    if (strcmp(argv[1], "binder") == 0) {
+        typedef int (__stdcall *pCreateBinder)(const char *, BINDER_INIT *, void *);
+        typedef int (__stdcall *pInsertDoc)(HDOC, int, const char *, void *);
+        pCreateBinder cb = fn("XDW_CreateBinder");
+        pInsertDoc ins = fn("XDW_InsertDocumentToBinder");
+        BINDER_INIT bi = { sizeof bi, 0, 0 };
+        int rr = cb(argv[2], &bi, NULL);
+        printf("create %d\n", rr);
+        if (rr < 0 || argc < 4) return rr < 0 ? 4 : 0;
+        OPEN_MODE_EX bm = { sizeof bm, 1, 1 };
+        HDOC b = NULL;
+        rr = open(argv[2], &b, &bm);
+        if (rr < 0) { printf("OPEN-ERROR %08x\n", rr); return 3; }
+        for (int k = 3; k < argc; k++) printf("insert %s %d\n", argv[k], ins(b, k - 2, argv[k], NULL));
+        printf("save %d\n", ((pSave)fn("XDW_SaveDocument"))(b, NULL));
+        close(b, NULL);
+        return 0;
+    }
+    int edit = strcmp(argv[1], "make") == 0 || strcmp(argv[1], "stampvar") == 0 || strcmp(argv[1], "addimg") == 0 || strcmp(argv[1], "move") == 0
+        || strcmp(argv[1], "addann") == 0 || strcmp(argv[1], "orig") == 0 || strcmp(argv[1], "setattr") == 0;
     OPEN_MODE_EX om = { sizeof om, edit ? 1 : 0, 1 };
     HDOC d = NULL;
     int r = open(argv[2], &d, &om);
@@ -229,6 +261,88 @@ int main(int argc, char **argv) {
         printf("position %d\n", pos(d, a.handle, atoi(argv[5]), atoi(argv[6]), NULL));
         if (argc >= 9) printf("size %d\n", size(d, a.handle, atoi(argv[7]), atoi(argv[8]), NULL));
         printf("save %d\n", save(d, NULL));
+    } else if (strcmp(argv[1], "addann") == 0 && argc >= 6) {
+        pAdd add = fn("XDW_AddAnnotation");
+        pSetAttr set = fn("XDW_SetAnnotationAttribute");
+        pSave save = fn("XDW_SaveDocument");
+        int type = atoi(argv[3]);
+        XPOINT pts[256]; int n = 0, k = 6;
+        while (k + 1 < argc && argv[k][1] != ':' && n < 256) { pts[n].x = atoi(argv[k]); pts[n].y = atoi(argv[k + 1]); n++; k += 2; }
+        AA_POINTS ap; memset(&ap, 0, sizeof ap);
+        ap.common.nSize = sizeof ap; ap.common.nAnnotationType = type; ap.nCounts = n; ap.pPoints = pts;
+        AA_WH wh; memset(&wh, 0, sizeof wh);
+        void *init = n ? (void *)&ap : NULL;
+        for (int j = k; j < argc; j++) {
+            /* w:W or w:WxH gives the box a size (types that take a width, or width and height) */
+            if (argv[j][0] == 'w' && argv[j][1] == ':') {
+                wh.common.nSize = strchr(argv[j], 'x') ? (int)sizeof(AA_WH) : (int)sizeof(AA_W);
+                wh.common.nAnnotationType = type;
+                wh.nWidth = atoi(argv[j] + 2);
+                if (strchr(argv[j], 'x')) wh.nHeight = atoi(strchr(argv[j], 'x') + 1);
+                init = &wh;
+            }
+        }
+        HANN a = NULL;
+        r = add(d, type, 1, atoi(argv[4]), atoi(argv[5]), init, &a, NULL);
+        printf("add %d (%08x) points %d\n", r, r, n);
+        for (; r >= 0 && k < argc; k++) {
+            char *eq = strchr(argv[k], '=');
+            if (!eq || argv[k][1] != ':') continue;
+            *eq = 0;
+            if (argv[k][0] == 'i') { int v = (int)strtol(eq + 1, NULL, 0); printf("%s %d\n", argv[k] + 2, set(d, a, argv[k] + 2, 0, (char *)&v, 0, NULL)); }
+            else printf("%s %d\n", argv[k] + 2, set(d, a, argv[k] + 2, 1, eq + 1, 0, NULL));
+        }
+        printf("save %d\n", save(d, NULL));
+    } else if (strcmp(argv[1], "setattr") == 0 && argc >= 5) {
+        pAnnInfo ai = fn("XDW_GetAnnotationInformation");
+        pSetAttr set = fn("XDW_SetAnnotationAttribute");
+        ANN_INFO a; memset(&a, 0, sizeof a); a.nSize = sizeof a;
+        r = ai(d, atoi(argv[3]), NULL, atoi(argv[4]), &a, NULL);
+        printf("info %d type %d\n", r, a.nAnnotationType);
+        for (int k = 5; r >= 0 && k < argc; k++) {
+            char *eq = strchr(argv[k], '=');
+            if (!eq || argv[k][1] != ':') continue;
+            *eq = 0;
+            if (argv[k][0] == 'i') { int v = (int)strtol(eq + 1, NULL, 0); printf("%s %d\n", argv[k] + 2, set(d, a.handle, argv[k] + 2, 0, (char *)&v, 0, NULL)); }
+            else printf("%s %d\n", argv[k] + 2, set(d, a.handle, argv[k] + 2, 1, eq + 1, 0, NULL));
+        }
+        printf("save %d\n", ((pSave)fn("XDW_SaveDocument"))(d, NULL));
+    } else if (strcmp(argv[1], "orig") == 0 && argc >= 4) {
+        typedef int (__stdcall *pInsOrg)(HDOC, int, const char *, void *);
+        pInsOrg ins = fn("XDW_InsertOriginalData");
+        r = ins(d, 1, argv[3], NULL);
+        printf("insert original %d (%08x)\n", r, r);
+        printf("save %d\n", ((pSave)fn("XDW_SaveDocument"))(d, NULL));
+    } else if ((strcmp(argv[1], "originfo") == 0) || (strcmp(argv[1], "getorig") == 0 && argc >= 5)) {
+        typedef int (__stdcall *pOrgInfo)(HDOC, int, ORGDATA_INFO *, void *);
+        typedef int (__stdcall *pGetOrg)(HDOC, int, const char *, void *);
+        pDocInfo di = fn("XDW_GetDocumentInformation");
+        DOC_INFO info; memset(&info, 0, sizeof info); info.nSize = sizeof info;
+        di(d, &info);
+        printf("original data %d\n", info.nOriginalData);
+        if (argv[1][0] == 'g') {
+            r = ((pGetOrg)fn("XDW_GetOriginalData"))(d, atoi(argv[3]), argv[4], NULL);
+            printf("get %d (%08x)\n", r, r);
+        } else {
+            pOrgInfo oi = fn("XDW_GetOriginalDataInformation");
+            for (int k = 1; k <= info.nOriginalData; k++) {
+                ORGDATA_INFO o; memset(&o, 0, sizeof o); o.nSize = sizeof o;
+                int rr = oi(d, k, &o, NULL);
+                printf("original %d \"%s\" size %d date %ld (r=%d)\n", k, o.szName, o.nDataSize, o.nDate, rr);
+            }
+        }
+    } else if (strcmp(argv[1], "text") == 0 && argc >= 5) {
+        typedef int (__stdcall *pText)(HDOC, int, char *, int, void *);
+        pText gt = fn("XDW_GetPageTextToMemory");
+        int n = gt(d, atoi(argv[3]), NULL, 0, NULL);
+        printf("text size %d\n", n);
+        if (n > 0) {
+            char *buf = calloc(n + 1, 1);
+            r = gt(d, atoi(argv[3]), buf, n, NULL);
+            FILE *f = fopen(argv[4], "wb");
+            if (f) { fwrite(buf, 1, strlen(buf), f); fclose(f); }
+            printf("text %d\n", r);
+        }
     } else if (strcmp(argv[1], "render") == 0 && argc >= 5) {
         pConv conv = fn("XDW_ConvertPageToImageFile");
         IMAGE_OPTION io = { sizeof io, atoi(argc > 5 ? argv[5] : "100"), 1 };

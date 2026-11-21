@@ -72,13 +72,23 @@ against the real viewer**.
 | Limits for untrusted files (11/04) | Done. Expanded sizes from the file are no longer reserved up front: they are checked against `maxExpand` and `maxRatio` and memory grows with what is really decoded. Limits too for pixels per picture, drawing records and points per page, pages, and working memory (`Limits`, `Document::open_with`). Counts inside a record are cut to what the record holds. Past a limit: `TooLarge` ("too large or damaged"). The browser engine uses at most 1 GiB, and the editor checks a file in a Web Worker before opening it (`web/worker/ezpzxdw-safe.js`) |
 | Leaving out covered text (11/04) | Done. Text completely covered by an opaque fill or picture drawn after it is left out of the text, the PDF text layer and the editor's text selection (by default). Highlighters, partly transparent pictures and pictures in the same drawing (scans, pages taken from a PDF) are not covers. `include_hidden` / `setIncludeHidden(true)` / `--include-hidden` keep it; `hidden_chars` says how much was left out |
 
+## v0.4 (2026-11-21): arrows, markers, polygons, original files, new binders
+
+| Item | Status |
+|---|---|
+| Arrows | Done. Arrowheads on lines (0x803c): `LINE_STYLE` = which ends (1 start, 2 end, 3 both), `ARROW_SORT` = shape (0 wide open, 1 narrow open, 2 narrow filled), the head's three points in `ARROW_START_DATA` / `ARROW_END_DATA`. Matched by having the DocuWorks 10 API put arrowheads on our lines |
+| Markers | Done. 0x801b: `STROKE_DATA` (points, int32 pairs), `STROKE_COLOR`, `STROKE_THICKNESS`, `STROKE_PAERMEABLE` |
+| Polygons and polylines | Done. 0x8042: `%POLYGON_DATA` and friends; an open polyline takes arrowheads (`ARROW_TYPE`, `ARROW_STYLE`) |
+| Original files | Done. Records 1000 under 1306: `nd` data, `nf` name (Shift_JIS), `ut` time (Unix). Large data in an entry, LHA-compressed when that is smaller. Take out, attach, remove; checked both ways with the DocuWorks API |
+| New binders | Done. `Document::blank_binder`, `into_binder`. Editor: File > New Binder; adding a document to a `.xdw` makes a binder |
+| Editor | Esc while typing on a sticky note keeps the note (as in DocuWorks); a picture goes where you click (or drag) |
+| PDF text | PDFs whose Japanese fonts are not embedded keep their text: pdf.js gets its CMaps |
+
 ## Next
 
-1. **Verifying signatures**: check the certificate and show whether a signature still holds. Adding new signatures comes later.
-2. Extracting **attached original files (1306)**.
-3. Creating new binders (for now, only existing binders can be edited).
-4. The remaining annotation kinds such as markers and polygons (samples can be made with the
-   DocuWorks API to match against).
+1. **Signatures**: checking whether an electronic seal (電子印鑑) still holds, and adding new signatures, would mean opening DocuWorks' own encrypted signature data (`%spd`); left to DocuWorks. PKI signatures: to look at again with a PKI-signed sample.
+2. **Setting passwords**: left to DocuWorks, like opening protected documents.
+3. Received stamps (0x8040) and links (0xc02f): the DocuWorks API cannot make them; a sample made in DocuWorks Desk is needed.
 
 ## How it is checked
 

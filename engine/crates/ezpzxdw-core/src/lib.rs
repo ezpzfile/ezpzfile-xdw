@@ -22,3 +22,4 @@ pub mod pdf;
 pub mod pages;
 pub mod cfb;
 pub mod fresh;
+pub mod originals;

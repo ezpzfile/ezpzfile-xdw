@@ -7,7 +7,7 @@
 // `tr` / `translateDom` (editor/i18n.js) and `HOST` (editor/host.js) before
 // this file (see build.sh).
 
-const ICONS = {"folder-open": "<path d=\"m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2\" />", "save": "<path d=\"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z\" /> <path d=\"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7\" /> <path d=\"M7 3v4a1 1 0 0 0 1 1h7\" />", "printer": "<path d=\"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2\" /> <path d=\"M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6\" /> <rect x=\"6\" y=\"14\" width=\"12\" height=\"8\" rx=\"1\" />", "undo-2": "<path d=\"M9 14 4 9l5-5\" /> <path d=\"M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11\" />", "redo-2": "<path d=\"m15 14 5-5-5-5\" /> <path d=\"M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13\" />", "search": "<circle cx=\"11\" cy=\"11\" r=\"8\" /> <path d=\"m21 21-4.3-4.3\" />", "minus": "<path d=\"M5 12h14\" />", "plus": "<path d=\"M5 12h14\" /> <path d=\"M12 5v14\" />", "chevron-down": "<path d=\"m6 9 6 6 6-6\" />", "chevron-right": "<path d=\"m9 18 6-6-6-6\" />", "panel-left": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /> <path d=\"M9 3v18\" />", "panel-right": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /> <path d=\"M15 3v18\" />", "type": "<polyline points=\"4 7 4 4 20 4 20 7\" /> <line x1=\"9\" x2=\"15\" y1=\"20\" y2=\"20\" /> <line x1=\"12\" x2=\"12\" y1=\"4\" y2=\"20\" />", "trash-2": "<path d=\"M3 6h18\" /> <path d=\"M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6\" /> <path d=\"M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2\" /> <line x1=\"10\" x2=\"10\" y1=\"11\" y2=\"17\" /> <line x1=\"14\" x2=\"14\" y1=\"11\" y2=\"17\" />", "x": "<path d=\"M18 6 6 18\" /> <path d=\"m6 6 12 12\" />", "check": "<path d=\"M20 6 9 17l-5-5\" />", "file-text": "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\" /> <path d=\"M14 2v4a2 2 0 0 0 2 2h4\" /> <path d=\"M10 9H8\" /> <path d=\"M16 13H8\" /> <path d=\"M16 17H8\" />", "info": "<circle cx=\"12\" cy=\"12\" r=\"10\" /> <path d=\"M12 16v-4\" /> <path d=\"M12 8h.01\" />", "keyboard": "<path d=\"M10 8h.01\" /> <path d=\"M12 12h.01\" /> <path d=\"M14 8h.01\" /> <path d=\"M16 12h.01\" /> <path d=\"M18 8h.01\" /> <path d=\"M6 8h.01\" /> <path d=\"M7 16h10\" /> <path d=\"M8 12h.01\" /> <rect width=\"20\" height=\"16\" x=\"2\" y=\"4\" rx=\"2\" />", "mouse-pointer-2": "<path d=\"M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z\" />", "highlighter": "<path d=\"m9 11-6 6v3h9l3-3\" /> <path d=\"m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4\" />", "square": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" />", "circle": "<circle cx=\"12\" cy=\"12\" r=\"10\" />", "line": "<path d=\"M5 19 19 5\" />", "rotate-ccw": "<path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\" /> <path d=\"M3 3v5h5\" />", "rotate-cw": "<path d=\"M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8\" /> <path d=\"M21 3v5h-5\" />", "arrow-up": "<path d=\"m5 12 7-7 7 7\" /> <path d=\"M12 19V5\" />", "arrow-down": "<path d=\"M12 5v14\" /> <path d=\"m19 12-7 7-7-7\" />", "maximize": "<path d=\"M8 3H5a2 2 0 0 0-2 2v3\" /> <path d=\"M21 8V5a2 2 0 0 0-2-2h-3\" /> <path d=\"M3 16v3a2 2 0 0 0 2 2h3\" /> <path d=\"M16 21h3a2 2 0 0 0 2-2v-3\" />", "file-down": "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\" /> <path d=\"M14 2v4a2 2 0 0 0 2 2h4\" /> <path d=\"M12 18v-6\" /> <path d=\"m9 15 3 3 3-3\" />", "sticky-note": "<path d=\"M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z\" /> <path d=\"M15 3v6h6\" />", "stamp": "<path d=\"M5 22h14\" /> <path d=\"M19.27 13.73A2.5 2.5 0 0 0 17.5 13h-11A2.5 2.5 0 0 0 4 15.5V17a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1.5c0-.66-.26-1.3-.73-1.77Z\" /> <path d=\"M14 13V8.5C14 7 15 7 15 5a3 3 0 0 0-3-3c-1.69 0-3 1-3 3 0 2 1 2 1 3.5V13\" />", "file-plus": "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\" /> <path d=\"M14 2v4a2 2 0 0 0 2 2h4\" /> <path d=\"M9 15h6\" /> <path d=\"M12 18v-6\" />", "image-plus": "<path d=\"M16 5h6\" /> <path d=\"M19 2v6\" /> <path d=\"M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5\" /> <path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\" /> <circle cx=\"9\" cy=\"9\" r=\"2\" />", "files": "<path d=\"M20 7h-3a2 2 0 0 1-2-2V2\" /> <path d=\"M9 18a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7l4 4v10a2 2 0 0 1-2 2Z\" /> <path d=\"M3 7.6v12.8A1.6 1.6 0 0 0 4.6 22h9.8\" />", "pencil": "<path d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\" /> <path d=\"m15 5 4 4\" />", "chevron-up": "<path d=\"m18 15-6-6-6 6\" />", "download": "<path d=\"M12 15V3\" /> <path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /> <path d=\"m7 10 5 5 5-5\" />", "share-2": "<circle cx=\"18\" cy=\"5\" r=\"3\" /> <circle cx=\"6\" cy=\"12\" r=\"3\" /> <circle cx=\"18\" cy=\"19\" r=\"3\" /> <line x1=\"8.59\" x2=\"15.42\" y1=\"13.51\" y2=\"17.49\" /> <line x1=\"15.41\" x2=\"8.59\" y1=\"6.51\" y2=\"10.49\" />", "menu": "<line x1=\"4\" x2=\"20\" y1=\"12\" y2=\"12\" /> <line x1=\"4\" x2=\"20\" y1=\"6\" y2=\"6\" /> <line x1=\"4\" x2=\"20\" y1=\"18\" y2=\"18\" />", "shield-check": "<path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\" /> <path d=\"m9 12 2 2 4-4\" />", "book-open": "<path d=\"M12 7v14\" /> <path d=\"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z\" />"};
+const ICONS = {"arrow-up-right": "<path d=\"M7 7h10v10\" /> <path d=\"M7 17 17 7\" />", "pentagon": "<path d=\"M10.83 2.38a2 2 0 0 1 2.34 0l8 5.74a2 2 0 0 1 .73 2.25l-3.04 9.26a2 2 0 0 1-1.9 1.37H7.04a2 2 0 0 1-1.9-1.37L2.1 10.37a2 2 0 0 1 .73-2.25z\" />", "folder-open": "<path d=\"m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2\" />", "save": "<path d=\"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z\" /> <path d=\"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7\" /> <path d=\"M7 3v4a1 1 0 0 0 1 1h7\" />", "printer": "<path d=\"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2\" /> <path d=\"M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6\" /> <rect x=\"6\" y=\"14\" width=\"12\" height=\"8\" rx=\"1\" />", "undo-2": "<path d=\"M9 14 4 9l5-5\" /> <path d=\"M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11\" />", "redo-2": "<path d=\"m15 14 5-5-5-5\" /> <path d=\"M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13\" />", "search": "<circle cx=\"11\" cy=\"11\" r=\"8\" /> <path d=\"m21 21-4.3-4.3\" />", "minus": "<path d=\"M5 12h14\" />", "plus": "<path d=\"M5 12h14\" /> <path d=\"M12 5v14\" />", "chevron-down": "<path d=\"m6 9 6 6 6-6\" />", "chevron-right": "<path d=\"m9 18 6-6-6-6\" />", "panel-left": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /> <path d=\"M9 3v18\" />", "panel-right": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /> <path d=\"M15 3v18\" />", "type": "<polyline points=\"4 7 4 4 20 4 20 7\" /> <line x1=\"9\" x2=\"15\" y1=\"20\" y2=\"20\" /> <line x1=\"12\" x2=\"12\" y1=\"4\" y2=\"20\" />", "trash-2": "<path d=\"M3 6h18\" /> <path d=\"M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6\" /> <path d=\"M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2\" /> <line x1=\"10\" x2=\"10\" y1=\"11\" y2=\"17\" /> <line x1=\"14\" x2=\"14\" y1=\"11\" y2=\"17\" />", "x": "<path d=\"M18 6 6 18\" /> <path d=\"m6 6 12 12\" />", "check": "<path d=\"M20 6 9 17l-5-5\" />", "file-text": "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\" /> <path d=\"M14 2v4a2 2 0 0 0 2 2h4\" /> <path d=\"M10 9H8\" /> <path d=\"M16 13H8\" /> <path d=\"M16 17H8\" />", "info": "<circle cx=\"12\" cy=\"12\" r=\"10\" /> <path d=\"M12 16v-4\" /> <path d=\"M12 8h.01\" />", "keyboard": "<path d=\"M10 8h.01\" /> <path d=\"M12 12h.01\" /> <path d=\"M14 8h.01\" /> <path d=\"M16 12h.01\" /> <path d=\"M18 8h.01\" /> <path d=\"M6 8h.01\" /> <path d=\"M7 16h10\" /> <path d=\"M8 12h.01\" /> <rect width=\"20\" height=\"16\" x=\"2\" y=\"4\" rx=\"2\" />", "mouse-pointer-2": "<path d=\"M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z\" />", "highlighter": "<path d=\"m9 11-6 6v3h9l3-3\" /> <path d=\"m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4\" />", "square": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" />", "circle": "<circle cx=\"12\" cy=\"12\" r=\"10\" />", "line": "<path d=\"M5 19 19 5\" />", "rotate-ccw": "<path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\" /> <path d=\"M3 3v5h5\" />", "rotate-cw": "<path d=\"M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8\" /> <path d=\"M21 3v5h-5\" />", "arrow-up": "<path d=\"m5 12 7-7 7 7\" /> <path d=\"M12 19V5\" />", "arrow-down": "<path d=\"M12 5v14\" /> <path d=\"m19 12-7 7-7-7\" />", "maximize": "<path d=\"M8 3H5a2 2 0 0 0-2 2v3\" /> <path d=\"M21 8V5a2 2 0 0 0-2-2h-3\" /> <path d=\"M3 16v3a2 2 0 0 0 2 2h3\" /> <path d=\"M16 21h3a2 2 0 0 0 2-2v-3\" />", "file-down": "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\" /> <path d=\"M14 2v4a2 2 0 0 0 2 2h4\" /> <path d=\"M12 18v-6\" /> <path d=\"m9 15 3 3 3-3\" />", "sticky-note": "<path d=\"M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z\" /> <path d=\"M15 3v6h6\" />", "stamp": "<path d=\"M5 22h14\" /> <path d=\"M19.27 13.73A2.5 2.5 0 0 0 17.5 13h-11A2.5 2.5 0 0 0 4 15.5V17a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1.5c0-.66-.26-1.3-.73-1.77Z\" /> <path d=\"M14 13V8.5C14 7 15 7 15 5a3 3 0 0 0-3-3c-1.69 0-3 1-3 3 0 2 1 2 1 3.5V13\" />", "file-plus": "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\" /> <path d=\"M14 2v4a2 2 0 0 0 2 2h4\" /> <path d=\"M9 15h6\" /> <path d=\"M12 18v-6\" />", "image-plus": "<path d=\"M16 5h6\" /> <path d=\"M19 2v6\" /> <path d=\"M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5\" /> <path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\" /> <circle cx=\"9\" cy=\"9\" r=\"2\" />", "files": "<path d=\"M20 7h-3a2 2 0 0 1-2-2V2\" /> <path d=\"M9 18a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7l4 4v10a2 2 0 0 1-2 2Z\" /> <path d=\"M3 7.6v12.8A1.6 1.6 0 0 0 4.6 22h9.8\" />", "pencil": "<path d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\" /> <path d=\"m15 5 4 4\" />", "chevron-up": "<path d=\"m18 15-6-6-6 6\" />", "download": "<path d=\"M12 15V3\" /> <path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /> <path d=\"m7 10 5 5 5-5\" />", "share-2": "<circle cx=\"18\" cy=\"5\" r=\"3\" /> <circle cx=\"6\" cy=\"12\" r=\"3\" /> <circle cx=\"18\" cy=\"19\" r=\"3\" /> <line x1=\"8.59\" x2=\"15.42\" y1=\"13.51\" y2=\"17.49\" /> <line x1=\"15.41\" x2=\"8.59\" y1=\"6.51\" y2=\"10.49\" />", "menu": "<line x1=\"4\" x2=\"20\" y1=\"12\" y2=\"12\" /> <line x1=\"4\" x2=\"20\" y1=\"6\" y2=\"6\" /> <line x1=\"4\" x2=\"20\" y1=\"18\" y2=\"18\" />", "shield-check": "<path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\" /> <path d=\"m9 12 2 2 4-4\" />", "book-open": "<path d=\"M12 7v14\" /> <path d=\"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z\" />"};
 
 const ic = (n, cls = "i") => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ""}</svg>`;
 
@@ -417,8 +417,10 @@ function buildThumbs() {
     return { c, done: false };
   });
   $("#pagecount").textContent = S.binder ? tr("{0} 文書 · {1} ページ", S.binder.docs.length, S.info.length) : tr("{0} ページ", S.info.length);
-  $("#binder-add").hidden = !S.binder;
-  $("#menu-binder").hidden = !S.binder;
+  // documents can be added to a binder, and to a document (it then becomes a binder)
+  $("#binder-add").hidden = !S.ed;
+  $("#binder-add").title = S.binder ? tr("バインダーに文書を追加") : tr("文書を追加してバインダーにまとめる");
+  $("#menu-binder").hidden = !S.ed;
   drawThumbs();
 }
 
@@ -542,6 +544,8 @@ function select(p, o) {
 }
 
 function setTool(t) {
+  if (t !== "picture") S.placing = null;
+  if (t !== "polygon") cancelPolygon();
   S.tool = t;
   if (t !== "select" && S.ed) HOST.once("annotate", { kind: t });
   $$("[data-tool]").forEach((b) => b.classList.toggle("on", b.dataset.tool === t));
@@ -558,7 +562,8 @@ function shapeFor(tool, w, h, from) {
     case "highlight": return { type: "rect", fill: num(S.hl), highlight: true };
     case "rect": return { type: "rect", stroke: c, width: S.width };
     case "ellipse": return { type: "ellipse", stroke: c, width: S.width };
-    case "line": return { type: "line", points: from, color: c, width: S.width };
+    case "line": return { type: "line", points: from, color: c, width: S.width, arrow: 0, arrow_style: 2 };
+    case "arrow": return { type: "line", points: from, color: c, width: S.width, arrow: 2, arrow_style: 2 };
   }
   return null;
 }
@@ -582,6 +587,17 @@ function bindPage(div, i) {
     if (S.tool === "stamp") {
       e.preventDefault();
       placeStamp(i, u, v);
+      return;
+    }
+    if (S.tool === "polygon") {
+      e.preventDefault();
+      addPolygonPoint(i, u, v);
+      return;
+    }
+    if (S.tool === "marker") {
+      e.preventDefault();
+      div.setPointerCapture(e.pointerId);
+      drag = { kind: "pen", pts: [[u, v]], svg: preview(div) };
       return;
     }
     if (S.tool !== "select") {
@@ -608,9 +624,15 @@ function bindPage(div, i) {
     if (S.tool !== "select" || objAt(i, u, v) >= 0 || e.target.closest(".selbox")) e.preventDefault();
   });
   div.addEventListener("pointermove", (e) => {
+    if (S.poly && S.poly.p === i && !drag) { const [u, v] = pos(e); drawPolygon([u, v]); return; }
     if (!drag) return;
     const [u, v] = pos(e);
     drag.u = u; drag.v = v;
+    if (drag.kind === "pen") {
+      const last = drag.pts[drag.pts.length - 1];
+      if (Math.hypot(u - last[0], v - last[1]) * sc() >= 2) { drag.pts.push([u, v]); drawPreview(drag.svg, drag.pts, false); }
+      return;
+    }
     if (drag.kind === "new") {
       const x = Math.min(u, drag.u0), y = Math.min(v, drag.v0);
       placeBox(drag.r, x, y, Math.abs(u - drag.u0), Math.abs(v - drag.v0));
@@ -626,17 +648,33 @@ function bindPage(div, i) {
   const end = (e) => {
     if (!drag) return;
     const d = drag; drag = null;
+    if (d.kind === "pen") {
+      d.svg.remove();
+      const pts = d.pts.length > 1 ? simplify(d.pts, 20) : [d.pts[0], [d.pts[0][0] + 1, d.pts[0][1] + 1]];
+      const base = { type: "marker", color: num(S.color), width: Math.max(S.width, 2), translucent: false };
+      const b = boxPoints(pts, base);
+      act(() => ({ pages: [i], sel: { p: i, o: S.ed.addAnnotation(i, b.x, b.y, b.w, b.h, JSON.stringify({ ...base, points: b.points })) } }));
+      return;
+    }
+    if (d.kind === "new" && S.tool === "picture") {
+      d.r.remove();
+      const [u, v] = pos(e);
+      const click = Math.abs(u - d.u0) * sc() < 6 && Math.abs(v - d.v0) * sc() < 6;
+      if (click) placePicture(i, u, v, 0, 0);
+      else placePicture(i, Math.min(u, d.u0), Math.min(v, d.v0), Math.abs(u - d.u0), Math.abs(v - d.v0));
+      return;
+    }
     if (d.kind === "new") {
       d.r.remove();
       const [u, v] = pos(e);
       const click = Math.abs(u - d.u0) * sc() < 4 && Math.abs(v - d.v0) * sc() < 4;
       let x, y, w, h, shape;
-      if (S.tool === "line") {
+      if (S.tool === "line" || S.tool === "arrow") {
         const x0 = d.u0, y0 = d.v0, x1 = click ? x0 + 3000 : u, y1 = click ? y0 : v;
-        const pad = 100;
-        x = Math.min(x0, x1) - pad; y = Math.min(y0, y1) - pad;
-        w = Math.abs(x1 - x0) + 2 * pad; h = Math.abs(y1 - y0) + 2 * pad;
-        shape = shapeFor("line", w, h, [[x0 - x, y0 - y], [x1 - x, y1 - y]]);
+        const base = shapeFor(S.tool, 0, 0, null);
+        const b = boxPoints([[x0, y0], [x1, y1]], base);
+        ({ x, y, w, h } = b);
+        shape = { ...base, points: b.points };
       } else {
         if (click) { x = u; y = v; w = 4000; h = S.tool === "highlight" ? 600 : 2500; }
         else { x = Math.min(u, d.u0); y = Math.min(v, d.v0); w = Math.abs(u - d.u0); h = Math.abs(v - d.v0); }
@@ -666,6 +704,7 @@ function bindPage(div, i) {
   div.addEventListener("pointerup", end);
   div.addEventListener("pointercancel", () => { if (drag && drag.r) drag.r.remove(); drag = null; showSel(); });
   div.addEventListener("dblclick", (e) => {
+    if (S.poly && S.poly.p === i) { e.preventDefault(); finishPolygon(true); return; }
     const [u, v] = pos(e);
     const k = objAt(i, u, v);
     if (k < 0) return;
@@ -692,8 +731,97 @@ function geom(d, du, dv, keep) {
 
 function scaleShape(shape, o, g) {
   const s = JSON.parse(JSON.stringify(shape));
-  if (s.type === "line" && o.w && o.h) s.points = s.points.map(([x, y]) => [x * g.w / o.w, y * g.h / o.h]);
+  if (s.points && o.w && o.h) s.points = s.points.map(([x, y]) => [x * g.w / o.w, y * g.h / o.h]);
   return s;
+}
+
+/**
+ * The box for a line, marker or polygon given its points on the page: room
+ * for the pen and for arrowheads (DocuWorks' sizes, see the engine's
+ * arrow_head), and the points relative to the box.
+ */
+function boxPoints(abs, shape) {
+  const w = shape.width || 1;
+  let pad = 150 + w * 18;
+  if (shape.arrow && shape.type !== "marker" && !(shape.type === "polygon" && shape.closed !== false)) {
+    const n = abs.length;
+    const seg = (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const len = n >= 2 ? Math.min(seg(abs[0], abs[1]), seg(abs[n - 2], abs[n - 1])) : 1000;
+    const arm = shape.arrow_style === 0 || shape.arrow_style === 3 ? 1000 : Math.max(120, Math.min(190 * w, len / 7));
+    pad = Math.max(pad, arm + 100);
+  }
+  const xs = abs.map((q) => q[0]), ys = abs.map((q) => q[1]);
+  const x = Math.min(...xs) - pad, y = Math.min(...ys) - pad;
+  return { x, y, w: Math.max(...xs) - x + pad, h: Math.max(...ys) - y + pad, points: abs.map(([a, b]) => [Math.round(a - x), Math.round(b - y)]) };
+}
+
+/** Fewer points for a pen stroke: drop those closer than `tol` (1/100 mm) to the path. */
+function simplify(pts, tol) {
+  if (pts.length <= 2) return pts;
+  const dist = (p, a, b) => {
+    const dx = b[0] - a[0], dy = b[1] - a[1], l = dx * dx + dy * dy;
+    if (!l) return Math.hypot(p[0] - a[0], p[1] - a[1]);
+    const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l));
+    return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
+  };
+  let k = 0, far = 0;
+  for (let j = 1; j < pts.length - 1; j++) { const d = dist(pts[j], pts[0], pts[pts.length - 1]); if (d > far) { far = d; k = j; } }
+  if (far <= tol) return [pts[0], pts[pts.length - 1]];
+  return [...simplify(pts.slice(0, k + 1), tol).slice(0, -1), ...simplify(pts.slice(k), tol)];
+}
+
+/** An SVG over a page for drawing a stroke or a polygon in progress. */
+function preview(div) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "drawpreview");
+  svg.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;overflow:visible";
+  div.append(svg);
+  return svg;
+}
+
+function drawPreview(svg, pts, closed) {
+  const k = sc();
+  const d = pts.map(([x, y], j) => `${j ? "L" : "M"}${(x * k).toFixed(1)},${(y * k).toFixed(1)}`).join(" ") + (closed ? " Z" : "");
+  svg.innerHTML = `<path d="${d}" fill="none" stroke="${S.color}" stroke-width="${Math.max(1.5, S.width * 35.3 * k)}" stroke-linejoin="round" stroke-linecap="round"/>`;
+}
+
+// ------------------------------------------------------------------ polygons (click the corners)
+function addPolygonPoint(p, u, v) {
+  if (S.poly && S.poly.p !== p) cancelPolygon();
+  if (!S.poly) {
+    S.poly = { p, pts: [], svg: preview(S.pages[p].div) };
+    toast(tr("角をクリックしていきます。最初の点をクリックするかダブルクリック、Enter で完成です。"), 5000);
+  }
+  const pts = S.poly.pts;
+  // a click on the first corner closes the polygon
+  if (pts.length >= 3 && Math.hypot(u - pts[0][0], v - pts[0][1]) * sc() < 8) { finishPolygon(true); return; }
+  const last = pts[pts.length - 1];
+  if (!last || Math.hypot(u - last[0], v - last[1]) * sc() >= 3) pts.push([u, v]);
+  drawPolygon(null);
+}
+
+function drawPolygon(cursor) {
+  if (!S.poly) return;
+  drawPreview(S.poly.svg, cursor ? [...S.poly.pts, cursor] : S.poly.pts, false);
+}
+
+function cancelPolygon() {
+  if (!S.poly) return;
+  S.poly.svg.remove();
+  S.poly = null;
+  toast("", 1);
+}
+
+function finishPolygon(closed) {
+  const pl = S.poly;
+  if (!pl) return;
+  cancelPolygon();
+  const pts = pl.pts;
+  if (pts.length < 2) return;
+  const shut = closed && pts.length >= 3;
+  const base = { type: "polygon", stroke: num(S.color), width: S.width, fill: null, closed: shut, arrow: 0, arrow_style: 2 };
+  const b = boxPoints(pts, base);
+  act(() => ({ pages: [pl.p], sel: { p: pl.p, o: S.ed.addAnnotation(pl.p, b.x, b.y, b.w, b.h, JSON.stringify({ ...base, points: b.points })) } }));
 }
 
 // ------------------------------------------------------------------ text annotations
@@ -723,7 +851,7 @@ function openTextEditor(p, x, y, k, base) {
   };
   ta.addEventListener("input", fit);
   ta.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { e.preventDefault(); closeTextEditor(false); }
+    if (e.key === "Escape") { e.preventDefault(); closeTextEditor(true); }
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); closeTextEditor(true); }
     e.stopPropagation();
   });
@@ -742,13 +870,16 @@ function closeTextEditor(commit) {
   const text = ta.value.replace(/\s+$/, "");
   ta.remove();
   if (!commit) return;
+  // a sticky note stays even with no text on it (as in DocuWorks); an
+  // empty text box is not kept
+  const keepEmpty = shape.type === "sticky";
   if (k == null) {
-    if (!text) return;
+    if (!text && !keepEmpty) return;
     const s = { ...shape, text };
     act(() => ({ pages: [p], sel: { p, o: S.ed.addAnnotation(p, x, y, 0, 0, JSON.stringify(s)) } }));
   } else {
     if (text === shape.text) return;
-    if (!text) { act(() => { S.ed.deleteObject(p, k); return { pages: [p], sel: null }; }); return; }
+    if (!text && !keepEmpty) { act(() => { S.ed.deleteObject(p, k); return { pages: [p], sel: null }; }); return; }
     const s = { ...shape, text };
     act(() => { S.ed.changeAnnotation(p, k, x, y, 0, 0, JSON.stringify(s)); return { pages: [p], sel: { p, o: k } }; });
   }
@@ -805,6 +936,7 @@ function renderProps() {
         el("span", { text: tr("用紙") }), el("b", { text: p ? paperName(p.w, p.h) : "-" }),
         el("span", { text: tr("注釈") }), el("b", { text: tr("{0} 個", annots) })),
       el("p", { class: "note", html: tr("注釈を選ぶ: クリック<br>移動: ドラッグ / 矢印キー<br>大きさ: 角をドラッグ（Shift で縦横比を保つ）<br>テキストの修正: ダブルクリック<br>削除: Delete キー") })));
+    host.append(originalsBox());
     return;
   }
   const { p, o } = S.sel;
@@ -859,9 +991,34 @@ function renderProps() {
     box.append(colorRow(tr("線"), s.stroke, COLORS, (c) => change({ stroke: c }), true));
     box.append(colorRow(tr("塗り"), s.fill, ["#ffffff", ...HIGHLIGHTS], (c) => change({ fill: c }), true));
     box.append(widthRow(s.width, (w) => change({ width: w })));
-  } else if (s && s.type === "line") {
-    box.append(colorRow(tr("色"), s.color, COLORS, (c) => change({ color: c ?? 0 })));
-    box.append(widthRow(s.width, (w) => change({ width: w })));
+  } else if (s && (s.type === "line" || s.type === "marker" || s.type === "polygon")) {
+    // a change of width or arrowheads may need a bigger box: rebuild it from the points on the page
+    const reshape = (patch) => {
+      const ns = { ...s, ...patch };
+      const b = boxPoints(s.points.map(([a, c]) => [a + ob.x, c + ob.y]), ns);
+      act(() => { S.ed.changeAnnotation(p, o, b.x, b.y, b.w, b.h, JSON.stringify({ ...ns, points: b.points })); return { pages: [p], sel: { p, o } }; });
+    };
+    if (s.type === "polygon") {
+      box.append(colorRow(tr("線"), s.stroke, COLORS, (c) => reshape({ stroke: c }), true));
+      if (s.closed) box.append(colorRow(tr("塗り"), s.fill, ["#ffffff", ...HIGHLIGHTS], (c) => reshape({ fill: c }), true));
+      box.append(el("div", { class: "row" }, el("label", { text: tr("形") }),
+        el("button", { class: "pbtn" + (s.closed ? " on" : ""), text: tr("閉じる"), onclick: () => reshape({ closed: true, arrow: 0 }) }),
+        el("button", { class: "pbtn" + (s.closed ? "" : " on"), text: tr("開く（折れ線）"), onclick: () => s.points.length >= 2 && reshape({ closed: false, fill: null }) })));
+    } else {
+      box.append(colorRow(tr("色"), s.color, COLORS, (c) => reshape({ color: c ?? 0 })));
+    }
+    box.append(widthRow(s.width, (w) => reshape({ width: w })));
+    if (s.type === "marker") {
+      box.append(el("div", { class: "row" }, el("label", { text: tr("透過") }),
+        el("button", { class: "pbtn" + (s.translucent ? " on" : ""), text: tr("下の文字を透かす"), onclick: () => reshape({ translucent: !s.translucent }) })));
+    }
+    if (s.type === "line" || (s.type === "polygon" && !s.closed)) {
+      const ar = s.arrow || 0, st = s.arrow_style ?? 2;
+      box.append(el("div", { class: "row" }, el("label", { text: tr("矢印") }),
+        ...[[0, tr("なし")], [1, tr("始点")], [2, tr("終点")], [3, tr("両端")]].map(([v, l]) => el("button", { class: "pbtn" + (ar === v ? " on" : ""), text: l, onclick: () => reshape({ arrow: v }) }))));
+      if (ar) box.append(el("div", { class: "row" }, el("label", { text: tr("矢じり") }),
+        ...[[2, tr("塗りつぶし")], [1, tr("細い")], [0, tr("広い")]].map(([v, l]) => el("button", { class: "pbtn" + (st === v ? " on" : ""), text: l, onclick: () => reshape({ arrow_style: v }) }))));
+    }
   } else if (ob.kind === "picture" && ob.seeThrough != null) {
     const set = (on) => { if (on !== ob.seeThrough) act(() => { S.ed.setPicture(p, o, ob.x, ob.y, ob.w, ob.h, on); return { pages: [p], sel: { p, o } }; }); };
     box.append(el("div", { class: "row" }, el("label", { text: tr("透過") }),
@@ -882,6 +1039,54 @@ function renderProps() {
   }
   if (ob.kind !== "page" && ob.kind !== "signature") box.append(el("div", { class: "row" }, el("button", { class: "pbtn", html: ic("trash-2") + tr("削除"), onclick: deleteSelected })));
   host.append(box);
+}
+
+// ------------------------------------------------------------------ original data (原本)
+/** Files the document carries along (DocuWorks "原本添付"): take out, add, remove. */
+function originalsBox() {
+  let list = [];
+  try { list = JSON.parse(S.ed.originals()); } catch {}
+  const box = el("div", { class: "infobody" });
+  box.append(el("div", { class: "kv" }, el("span", { text: tr("原本") }), el("b", { text: list.length ? tr("{0} 個", list.length) : tr("なし") })));
+  list.forEach((o, k) => {
+    box.append(el("div", { class: "row orig" },
+      el("span", { class: "oname", text: o.name || tr("（名前なし）"), title: o.name }),
+      el("span", { class: "lab", text: sizeText(o.size) }),
+      el("button", { class: "pbtn", html: ic("download") + tr("取り出す"), title: tr("このファイルを保存します"), onclick: () => takeOriginal(k, o.name) }),
+      el("button", { class: "pbtn", text: tr("外す"), onclick: () => dropOriginal(k, o.name) })));
+  });
+  box.append(el("div", { class: "row" }, el("button", { class: "pbtn", html: ic("file-plus") + tr("原本を添付…"), onclick: attachOriginal })));
+  if (!list.length) box.append(el("p", { class: "note", text: tr("元の Word・Excel などのファイルを文書に添付しておけます（DocuWorks の原本添付）。") }));
+  return box;
+}
+
+function sizeText(n) {
+  return n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : n >= 1024 ? Math.round(n / 1024) + " KB" : n + " B";
+}
+
+function takeOriginal(k, name) {
+  try {
+    download(S.ed.originalData(k), name || "original", "application/octet-stream");
+    HOST.event("original", { op: "take" });
+  } catch (e) {
+    toast(tr("原本を取り出せませんでした: {0}", errText(e)));
+  }
+}
+
+async function attachOriginal() {
+  if (!S.ed) return;
+  const files = await pickFile("", true);
+  for (const f of files) {
+    const data = new Uint8Array(await f.arrayBuffer());
+    act(() => { S.ed.addOriginal(f.name, data, Math.floor(Date.now() / 1000)); return { pages: [] }; });
+  }
+  if (files.length) { HOST.event("original", { op: "add" }); toast(tr("{0} 個のファイルを原本として添付しました", files.length)); }
+}
+
+async function dropOriginal(k, name) {
+  const r = await confirmBox(tr("原本を外す"), tr("「{0}」を文書から外しますか？（元に戻すことができます）", name), false);
+  if (r !== "ok") return;
+  act(() => { S.ed.deleteOriginal(k); return { pages: [] }; });
 }
 
 function widthRow(v, on) {
@@ -918,6 +1123,30 @@ function useDoc(ed, name) {
   renderProps();
   updateChrome();
   $("#scroller").scrollTop = 0;
+}
+
+/** A new binder made of documents the user picks (.xdw, .xbd). */
+async function newBinder() {
+  if (!(await askDiscard())) return;
+  const files = await pickFile(".xdw,.xbd", true);
+  if (!files.length) return;
+  const name = tr("無題のバインダー");
+  const b = XdwDoc.blankBinder(name);
+  let at = 0;
+  for (const f of files) {
+    try {
+      at += b.addBinderDocs(at, new Uint8Array(await f.arrayBuffer()), f.name.replace(/\.(xdw|xbd)$/i, ""));
+    } catch (e) {
+      toast(`${f.name}: ${errText(e)}`, 5000);
+    }
+  }
+  if (!at) { b.free(); return; }
+  b.clearHistory();
+  useDoc(b, name);
+  S.edited = true;
+  updateChrome();
+  HOST.event("new", { from: "binder" });
+  toast(tr("{0} 文書でバインダーを作りました", at), 4000);
 }
 
 /** A new document: one blank A4 page, saved as DocuWorks 10 writes a new document. */
@@ -1258,17 +1487,36 @@ async function pickPicture() {
   if (!f) return;
   try {
     const c = await fileCanvas(f, 1600);
-    const p = S.cur, pg = S.info[p];
-    let w = Math.min(pg.w * 0.5, c.width * 2540 / 150), h = w * c.height / c.width;
-    if (h > pg.h * 0.6) { h = pg.h * 0.6; w = h * c.width / c.height; }
     const rgba = new Uint8Array(c.getContext("2d").getImageData(0, 0, c.width, c.height).data.buffer);
+    setTool("picture");
     // a picture with transparent parts stays see-through (white shows the page)
-    const see = c.clear;
-    act(() => ({ pages: [p], sel: { p, o: S.ed.addPicture(p, (pg.w - w) / 2, (pg.h - h) / 2, w, h, rgba, c.width, c.height, see) } }));
-    toast(see ? tr("画像を貼りました。白い部分は下の文字が透けて見えます。") : tr("画像を貼りました。右の「透過」で白い部分を透かせます。"), 4000);
+    S.placing = { c, rgba, see: c.clear };
+    toast(tr("貼る場所をクリックしてください。ドラッグすると大きさも決められます。"), 6000);
   } catch (e) {
     toast(tr("画像を読めませんでした: {0}", e.message || e));
   }
+}
+
+/**
+ * Put the chosen picture on page `p`: a click (w = 0) puts it there at about
+ * 150 dpi, at most a quarter of the page across; a drag fits it in the box.
+ */
+function placePicture(p, x, y, bw, bh) {
+  const pl = S.placing;
+  if (!pl) { setTool("select"); return; }
+  const pg = S.info[p], c = pl.c, r = c.height / c.width;
+  let w, h;
+  if (bw > 300 && bh > 300) {
+    w = Math.min(bw, bh / r); h = w * r;
+  } else {
+    w = Math.min(pg.w * 0.25, c.width * 2540 / 150); h = w * r;
+    if (h > pg.h * 0.25) { h = pg.h * 0.25; w = h / r; }
+    x -= w / 2; y -= h / 2;
+  }
+  x = Math.max(0, Math.min(pg.w - w, x)); y = Math.max(0, Math.min(pg.h - h, y));
+  setTool("select");
+  act(() => ({ pages: [p], sel: { p, o: S.ed.addPicture(p, x, y, w, h, pl.rgba, c.width, c.height, pl.see) } }));
+  toast(pl.see ? tr("画像を貼りました。白い部分は下の文字が透けて見えます。") : tr("画像を貼りました。右の「透過」で白い部分を透かせます。"), 4000);
 }
 
 function insertBlank(at) {
@@ -1363,9 +1611,14 @@ function snapPaper(w, h) {
 }
 
 let PDFJS = null;
+const PDFJS_BASE = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+/** How a PDF is opened: with the character maps (CMaps) and standard fonts that
+ * text in fonts the PDF does not embed needs, e.g. Japanese in MS Mincho. */
+const PDFJS_DATA = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/"; // cdnjs has no CMaps for this version
+const pdfSource = (data) => ({ data, cMapUrl: PDFJS_DATA + "cmaps/", cMapPacked: true, standardFontDataUrl: PDFJS_DATA + "standard_fonts/" });
 async function pdfjs() {
   if (PDFJS) return PDFJS;
-  const base = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+  const base = PDFJS_BASE;
   await new Promise((res, rej) => {
     const sc = document.createElement("script");
     sc.src = base + "pdf.min.js";
@@ -1410,7 +1663,7 @@ async function pdfTextRuns(page, v1, pw, ph) {
 async function insertPdf(f, at) {
   toast(tr("PDF を読み込んでいます…"), 60000);
   const lib = await pdfjs();
-  const pdf = await lib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
+  const pdf = await lib.getDocument(pdfSource(new Uint8Array(await f.arrayBuffer()))).promise;
   const n = pdf.numPages;
   let which = [0];
   if (n > 1) {
@@ -1475,8 +1728,23 @@ async function deleteDoc(k) {
 }
 
 async function pickBinderAdd() {
-  if (!S.binder) return;
+  if (!S.ed) return;
   const files = await pickFile(".xdw,.xbd", true);
+  if (!files.length) return;
+  if (!S.binder) {
+    // a document cannot hold other documents: put it in a new binder first
+    try {
+      const b = S.ed.intoBinder(S.name, S.name);
+      S.ed.free();
+      S.ed = b;
+      S.ext = ".xbd";
+      S.binder = JSON.parse(S.ed.binder());
+      toast(tr("バインダーにまとめました。保存すると .xbd になります。"), 5000);
+    } catch (e) {
+      toast(errText(e), 5000);
+      return;
+    }
+  }
   let at = docOf(S.cur) + 1, added = 0;
   for (const f of files) {
     try {
@@ -1494,6 +1762,7 @@ function buildMenus() {
   const menus = [
     [tr("ファイル"), "F", [
       [tr("新規作成"), "", newDoc],
+      [tr("新規バインダー…"), "", newBinder],
       [tr("開く…"), MOD + "O", openPicker],
       [tr("上書き保存 (.xdw)"), MOD + "S", () => saveXdw()],
       [tr("名前を付けて保存…"), MOD + "Shift+S", saveAs],
@@ -1540,13 +1809,18 @@ function buildMenus() {
       [tr("四角形"), "R", () => setTool("rect")],
       [tr("楕円"), "E", () => setTool("ellipse")],
       [tr("直線"), "L", () => setTool("line")],
+      [tr("矢印"), "A", () => setTool("arrow")],
+      [tr("マーカー"), "M", () => setTool("marker")],
+      [tr("多角形"), "P", () => setTool("polygon")],
       null,
       [tr("付箋"), "S", () => setTool("sticky")],
       [tr("日付印"), "D", () => setTool("stamp")],
       [tr("画像を貼る…"), "", () => S.ed && pickPicture()],
+      null,
+      [tr("原本を添付…"), "", () => attachOriginal(), () => !!S.ed],
     ]],
     [tr("バインダー"), "B", [
-      [tr("文書を追加…"), "", () => pickBinderAdd(), () => !!S.binder],
+      [tr("文書を追加…"), "", () => pickBinderAdd(), () => !!S.ed],
       [tr("文書名を変更…"), "", () => renameDoc(docOf(S.cur)), () => !!S.binder],
       [tr("文書を上へ"), "", () => moveDoc(docOf(S.cur), docOf(S.cur) - 1), () => !!S.binder && docOf(S.cur) > 0],
       [tr("文書を下へ"), "", () => moveDoc(docOf(S.cur), docOf(S.cur) + 1), () => !!S.binder && docOf(S.cur) < S.binder.docs.length - 1],
@@ -1657,6 +1931,9 @@ function buildToolbar() {
     tool("rect", "square", tr("四角形"), "R"),
     tool("ellipse", "circle", tr("楕円"), "E"),
     tool("line", "line", tr("直線"), "L"),
+    tool("arrow", "arrow-up-right", tr("矢印"), "A"),
+    tool("marker", "pencil", tr("マーカー"), "M"),
+    tool("polygon", "pentagon", tr("多角形"), "P"),
     el("span", { class: "vsep" }), sw, el("span", { class: "vsep" }), hs, el("span", { class: "vsep" }),
     el("span", { class: "fill" }, size, el("span", { class: "unit", text: "pt" })),
     el("span", { class: "fill" }, width),
@@ -1813,13 +2090,14 @@ function bindChrome() {
     else if (mod && (k === "+" || k === "=")) { e.preventDefault(); rezoom(S.zoom * 1.2); }
     else if (mod && k === "-") { e.preventDefault(); rezoom(S.zoom / 1.2); }
     else if (!mod && (e.key === "Delete" || e.key === "Backspace") && S.sel) { e.preventDefault(); deleteSelected(); }
+    else if (e.key === "Enter" && S.poly) { e.preventDefault(); finishPolygon(true); }
     else if (e.key === "Escape") { closeSaveMenu(); setTool("select"); select(null); }
     else if (!mod && S.sel && e.key.startsWith("Arrow")) {
       e.preventDefault();
       const step = e.shiftKey ? 1000 : 100;
       nudge(e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0, e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0);
     } else if (!mod && !e.altKey && S.ed) {
-      const t = { t: "text", s: "sticky", d: "stamp", h: "highlight", r: "rect", e: "ellipse", l: "line", v: "select" }[k];
+      const t = { t: "text", s: "sticky", d: "stamp", h: "highlight", r: "rect", e: "ellipse", l: "line", a: "arrow", m: "marker", p: "polygon", v: "select" }[k];
       if (t) setTool(t);
       else if (e.key === "PageDown") gotoPage(Math.min(S.info.length - 1, S.cur + 1));
       else if (e.key === "PageUp") gotoPage(Math.max(0, S.cur - 1));

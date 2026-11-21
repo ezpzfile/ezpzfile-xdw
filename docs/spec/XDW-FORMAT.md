@@ -248,7 +248,23 @@ swap the page size, move and swap every placement, add 90 to every object's 61.
 - rectangle (803d) / ellipse (803e): `RECTATT_` / `ARCATT_` LINE, THICK,
   LINECOLOR, DRAW, RECTCOLOR, `ATTR_FRAMETRANSPARENT`, `ATTR_FILLTRANSPARENT`
 - line (803c): `LINE_COLOR`, `LINE_WIDTH`, `LINE_STYLE`, `ARROW_SORT`,
-  `LINE_DATA` (i32 LE point pairs)
+  `LINE_DATA` (i32 LE point pairs). **Arrowheads** [DocuWorks 10's API set
+  `%ArrowheadType` / `%ArrowheadStyle` on our line, read back]: `LINE_STYLE`
+  is the type (0 none, 1 start, 2 end, 3 both), `ARROW_SORT` the style (0 wide
+  open, 1 narrow open, 2 narrow filled; 3 looks like 0), and each head's three
+  points (one side, the tip, the other side) are kept in `ARROW_START_DATA` /
+  `ARROW_END_DATA`. Wide heads have 10 mm arms at 45°; narrow ones 15° with
+  arms that grow with the width (about 3.8 mm at 2 pt) but stay under a
+  seventh of the end segment. DocuWorks also regrows the box to hold the heads
+- marker (801b) [made with the API]: `STROKE_DATA` (i32 point pairs relative
+  to the box), `STROKE_COLOR`, `STROKE_THICKNESS` (pt), `STROKE_PAERMEABLE`
+  (1 = the page shows through); the box has a 2.5 mm margin around the points
+- polygon (8042) [made with the API]: `%POLYGON_DATA` (i32 pairs),
+  `%ATTR_FRAMETRANSPARENT`, `%POLYGON_FRAME` / `%POLYGON_FRAMECOLOR`,
+  `%POLYGON_THICK`, `%POLYGON_FILL` / `%POLYGON_FILLCOLOR`,
+  `%ATTR_FILLTRANSPARENT`, `%POLYGON_CLOSE` (0 = an open polyline), and for a
+  polyline's arrowheads `ARROW_TYPE`, `ARROW_STYLE`, `ARROW_START_DATA`,
+  `ARROW_END_DATA` (as for lines)
 - picture (803f): only 57, 5, 61, 3 and 7; the drawing is kind 7 (below).
   **Shown opaque**: white pixels cover the page [viewer: `ATTR_TRANSPARENT`,
   `%ATTR_TRANSPARENT`, `ATTR_FILLTRANSPARENT`, `%Transparent` = 1 change
@@ -280,6 +296,24 @@ swap the page size, move and swap every placement, add 90 to every object's 61.
   (a drawing), and 7 (the stamp drawing). Reading these says who the
   signing module is and the version; whether the signature still holds
   needs the DocuWorks API or verifying the certificate
+
+### 4.6 Original data (原本)
+
+Files attached to a document (DocuWorks "original data") are records 1000
+under the document's 1306 [made with `XDW_InsertOriginalData`, read back]:
+`nd` the data, `nf` the file name (Shift_JIS + NUL), `ut` when it was
+attached (Unix time), 3 = its number (1306 keeps `lastmid`). A few bytes stay
+in `nd`; larger data is in a raw entry that `nd` refers to (`81` index, `82`
+the data's length), LHA-compressed when that is smaller (then `83` is the
+stored length). In a binder each document has its own 1306.
+
+### 4.7 A new binder
+
+DocuWorks 10's API (`XDW_CreateBinder`) writes generation **7** with root
+c014: `%bindercolor` 0, `%bindersize` [0, 0], attribute 4 = the name as UTF-16
+and one zero byte, then 1401 (the list, which gets `lastmid` with the first
+document) and 1304. Each document is 1402 holding a whole c013 tree, named by
+its attribute 4 (and 70 as UTF-16 from DocuWorks 10).
 
 ## 5. Drawings
 

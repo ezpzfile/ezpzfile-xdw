@@ -66,12 +66,23 @@ JTD 때와 같은 방식: **엔진(Rust) + 한 파일짜리 웹 편집기 + 공�
 | 믿을 수 없는 파일의 상한 (11/04) | 완료. 파일에 적힌 푼 크기를 미리 잡지 않고 상한(`maxExpand`, `maxRatio`)과 맞춰 본 뒤 실제로 푼 만큼만 씀. 그림 화소 수, 한 쪽의 그리기 기록 수와 점 수, 쪽 수, 작업 메모리에도 상한(`Limits`, `Document::open_with`). 기록 안의 개수는 기록에 들어 있는 만큼으로 자름. 넘으면 `TooLarge`("too large or damaged"). 브라우저 엔진은 최대 1 GiB, 편집기는 Web Worker에서 확인한 뒤 엶(`web/worker/ezpzxdw-safe.js`) |
 | 가린 글자 빼기 (11/04) | 완료. 나중에 그려진 불투명한 칠이나 그림에 완전히 가린 글자는 텍스트·PDF 글자 층·편집기 글자 선택에서 뺌(기본). 형광펜, 반투명한 그림, 같은 그림 안의 그림(스캔, PDF에서 가져온 쪽)은 가리개로 보지 않음. `include_hidden` / `setIncludeHidden(true)` / `--include-hidden`으로 남길 수 있음. 뺀 수는 `hidden_chars` |
 
+## v0.4 (2026-11-21): 화살표·마커·다각형, 원본, 새 바인더
+
+| 항목 | 상태 |
+|---|---|
+| 화살표 | 완료. 직선(0x803c)에 화살촉: `LINE_STYLE` = 종류(1 시작, 2 끝, 3 양쪽), `ARROW_SORT` = 모양(0 넓게 열림, 1 좁게 열림, 2 좁게 채움), 화살촉 세 점 `ARROW_START_DATA`·`ARROW_END_DATA`. DocuWorks 10 API로 우리 직선에 화살촉을 달게 해서 맞춤. 넓은 촉은 10mm·45°, 좁은 촉은 선 굵기에 따라 15° |
+| 마커 | 완료. 0x801b, `STROKE_DATA`(점, int32 쌍)·`STROKE_COLOR`·`STROKE_THICKNESS`·`STROKE_PAERMEABLE`(밑글씨 비침) |
+| 다각형·꺾은선 | 완료. 0x8042, `%POLYGON_DATA`·`%POLYGON_FRAME(COLOR)`·`%POLYGON_THICK`·`%POLYGON_FILL(COLOR)`·`%POLYGON_CLOSE`. 열린 꺾은선은 `ARROW_TYPE`·`ARROW_STYLE`로 화살촉 |
+| 원본(原本) | 완료. 1306 아래 1000 레코드: `nd` 데이터, `nf` 이름(Shift_JIS), `ut` 붙인 때(Unix 시간). 작은 것은 레코드 안, 큰 것은 엔트리(줄어들면 LHA로 압축, 참조에 0x83 저장 길이). 꺼내기·붙이기·빼기, DocuWorks API로 서로 읽기 확인 |
+| 새 바인더 | 완료. `Document::blank_binder`(DocuWorks 10 API가 만드는 모양: 세대 7, c014, 1401, 1304), `into_binder`(문서를 첫 문서로). 편집기: 파일 > 新規バインダー, .xdw에 문서를 더하면 바인더로 바뀜 |
+| 편집기 불편 | 付箋에 글을 쓰다 Esc를 눌러도 남음(DocuWorks처럼), 빈 付箋도 남음. 그림은 고른 뒤 누른 자리에(드래그하면 크기도). 문서 추가 단추를 .xdw에서도 보임 |
+| PDF 글자 | 내장하지 않은 일본어 글꼴(MS 明朝 등)의 PDF도 글자가 그림과 글자 층에 남게, pdf.js에 CMap을 줌(jsDelivr의 pdfjs-dist 3.11.174). DocuWorks 10 API로 PDF에서 가져온 쪽의 글자를 읽어 우리와 같음을 확인 |
+
 ## 다음
 
-1. **서명 검증**: 인증서를 확인해 서명이 지금도 유효한지 보여 줌. 새 서명 달기는 그다음.
-2. **원본 파일 첨부(1306)** 꺼내기.
-3. 새 바인더 만들기 (지금은 있는 바인더 편집만).
-4. 마커·다각형 등 나머지 주석 종류 (DocuWorks API로 샘플을 만들어 맞출 수 있음).
+1. **서명**: 電子印鑑의 유효성 확인과 새 서명은 DocuWorks만의 암호화된 서명 데이터(`%spd`)를 풀어야 해서 하지 않음(DocuWorks에 맡김). PKI(인증서) 서명 검증은 PKI 서명 견본이 생기면 다시 봄.
+2. **암호 걸기**: 보호된 문서 열기와 마찬가지로 DocuWorks에 맡김(2026-10 결정).
+3. 受信印(0x8040)·リンク(0xc02f) 주석: DocuWorks API로 만들 수 없어서 DocuWorks Desk로 만든 견본이 필요.
 
 ## 검증 방법
 

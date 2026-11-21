@@ -82,7 +82,7 @@ fn edits_save_and_read_back() {
             Shape::Rect { stroke: Some(0x0155ff), width: 2.0, fill: None, highlight: false },
             Shape::Rect { stroke: None, width: 1.0, fill: Some(0xffe14d), highlight: true },
             Shape::Ellipse { stroke: Some(0x00a36c), width: 3.0, fill: None },
-            Shape::Line { points: vec![(100.0, 100.0), (3000.0, 1500.0)], color: 0, width: 1.0 },
+            Shape::Line { points: vec![(100.0, 100.0), (3000.0, 1500.0)], color: 0, width: 1.0, arrow: 0, arrow_style: 2 },
         ];
         for (k, s) in shapes.iter().enumerate() {
             d.add_annotation(0, 1000.0 + 500.0 * k as f64, 2000.0 + 3000.0 * k as f64, 4000.0, 1600.0, s).unwrap();
@@ -268,7 +268,7 @@ fn a_new_document_from_scratch() {
         Shape::Text { text: "新規文書\n二行目".into(), size: 12.0, color: 0xd40000, bold: true, background: None, frame: None },
         Shape::Rect { stroke: None, width: 1.0, fill: Some(0xffe14d), highlight: true },
         Shape::Ellipse { stroke: Some(0x00a36c), width: 3.0, fill: None },
-        Shape::Line { points: vec![(100.0, 100.0), (3000.0, 1500.0)], color: 0, width: 1.0 },
+        Shape::Line { points: vec![(100.0, 100.0), (3000.0, 1500.0)], color: 0, width: 1.0, arrow: 0, arrow_style: 2 },
         Shape::Stamp { top: "受付".into(), date: "'26.10.07".into(), bottom: "総務".into(), color: 0xe60012 },
         Shape::Sticky { text: "付箋".into(), size: 12.0, color: 0, background: 0xffff64 },
     ];

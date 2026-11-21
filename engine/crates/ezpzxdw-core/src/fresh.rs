@@ -57,11 +57,18 @@ pub struct FreshParts {
 const K_1304: i64 = 0x1304;
 const K_ORIGINALS: i64 = 0x1306;
 const K_1305: i64 = 0x1305;
+const K_BINDER_LIST: i64 = 0x1401;
 
 /// The header DocuWorks 10 writes: generation 10, a document (c013), and
 /// 0x83 = 01 0d 0a 01, which every sample has.
 fn header(kind: i64) -> Vec<u8> {
-    let mut v = write::element(0x82, &[10]);
+    header_gen(10, kind)
+}
+
+/// The header with another generation (DocuWorks 10 writes a new binder
+/// as generation 7).
+fn header_gen(generation: u8, kind: i64) -> Vec<u8> {
+    let mut v = write::element(0x82, &[generation]);
     v.extend(write::element(0x80, &tlv::uint_bytes(kind as u64)));
     v.extend(write::element(0x83, &[0x01, 0x0d, 0x0a, 0x01]));
     write::element(T_HEADER, &v)
@@ -108,6 +115,36 @@ impl Document {
         ];
         let bytes = write::fresh(&header(K_ROOT), &[], &[], &records, T_TRAILER, &[0])?;
         Document::open(bytes)
+    }
+
+    /// A new binder (.xbd) with no documents yet, the way DocuWorks 10's
+    /// API makes one (generation 7, colour and size 0, the name as UTF-16
+    /// and one zero byte). Add documents with `add_binder_docs`; DocuWorks
+    /// shows a binder only once it holds one.
+    pub fn blank_binder(name: &str) -> Result<Document> {
+        let rec = |depth: u8, kind: i64, attrs: Vec<props::Attr>| Record { depth, kind: props::num_bytes(kind), attrs };
+        let mut nm: Vec<u8> = name.trim().encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
+        nm.push(0);
+        let root = vec![
+            defs_attr(&[(2001, 2, "%bindercolor"), (2002, 107, "%bindersize")]),
+            int_attr(2001, &[0]),
+            int_attr(2002, &[0, 0]),
+            crate::edit::named(4, nm),
+        ];
+        let records = vec![rec(0, crate::pages::K_BINDER, root), rec(1, K_BINDER_LIST, Vec::new()), rec(1, K_1304, Vec::new())];
+        let bytes = write::fresh(&header_gen(7, crate::pages::K_BINDER), &[], &[], &records, T_TRAILER, &[0])?;
+        Document::open(bytes)
+    }
+
+    /// A new binder named `binder_name` holding this document as its first,
+    /// named `doc_name`.
+    pub fn into_binder(&self, binder_name: &str, doc_name: &str) -> Result<Document> {
+        if self.is_binder() {
+            return Err(Error::Unsupported("already a binder".into()));
+        }
+        let mut b = Document::blank_binder(binder_name)?;
+        b.add_binder_docs(0, self, doc_name)?;
+        Ok(b)
     }
 
     /// The parts of the file written anew: the entries the records refer
