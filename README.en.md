@@ -12,7 +12,7 @@
 An open-source engine, editor and format specification for FUJIFILM (Fuji Xerox)
 DocuWorks files, built from scratch. Files never leave your device.
 
-Status: **v0.3, viewer + editor that saves back to `.xdw` / `.xbd` (developer preview).**
+Status: **v0.4, viewer + editor that saves back to `.xdw` / `.xbd` (developer preview).**
 Not affiliated with FUJIFILM Business Innovation.
 
 [![The XDW editor](docs/images/editor.png)](https://ezpzfile.com/xdw-editor)
@@ -81,8 +81,9 @@ Documents protected by a password or a certificate are reported as protected,
 with a note to remove the protection in DocuWorks first (this editor never
 handles passwords).
 
-Not yet: verifying that a signature still holds, and adding signatures or
-passwords. See the [plan](docs/PLAN.en.md)
+Checking that a signature still holds, and adding signatures or passwords,
+are left to DocuWorks. Received stamps and link annotations cannot be made yet
+(waiting for a sample made in DocuWorks Desk). See the [plan](docs/PLAN.en.md)
 ([日本語](docs/PLAN.ja.md), [한국어](docs/PLAN.ko.md)).
 
 ## Opening untrusted files
