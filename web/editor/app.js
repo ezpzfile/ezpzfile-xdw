@@ -1764,7 +1764,8 @@ function buildMenus() {
       [tr("新規作成"), "", newDoc],
       [tr("新規バインダー…"), "", newBinder],
       [tr("開く…"), MOD + "O", openPicker],
-      [tr("上書き保存 (.xdw)"), MOD + "S", () => saveXdw()],
+      // バインダー（.xbd）を開いているときも同じ項目なので、拡張子を書かない（2026-11-25）
+      [tr("上書き保存"), MOD + "S", () => saveXdw()],
       [tr("名前を付けて保存…"), MOD + "Shift+S", saveAs],
       null,
       [tr("PDF として保存"), "", () => savePdf()],

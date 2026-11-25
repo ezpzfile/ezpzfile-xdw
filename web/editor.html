@@ -403,7 +403,7 @@ dialog td:first-child { color: var(--ink-500); white-space: nowrap; }
 <dialog id="dlg-save"><form method="dialog">
   <header>名前を付けて保存</header>
   <div class="body">
-    <label class="flabel">ファイル名 <input class="field" id="save-name"></label>
+    <label class="flabel">ファイル名 <input class="field" id="save-name" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-form-type="other"></label>
     <div class="opts">
       <label><input type="radio" name="fmt" value="xdw" checked> <span><span id="fmt-xdw-label">DocuWorks 文書 (.xdw)</span> <span class="muted sub">DocuWorks でそのまま開けます</span></span></label>
       <label><input type="radio" name="fmt" value="pdf"> <span>PDF (.pdf) <span class="muted sub">画面と同じ見た目。文字の検索・コピーもできます</span></span></label>

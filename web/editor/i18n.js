@@ -80,6 +80,7 @@ const EN = {
   "ファイル": "File",
   "開く…": "Open…",
   "上書き保存 (.xdw)": "Save (.xdw)",
+  "上書き保存": "Save",
   "名前を付けて保存…": "Save As…",
   "PDF として保存": "Save as PDF",
   "テキストとして保存": "Save as Text",
